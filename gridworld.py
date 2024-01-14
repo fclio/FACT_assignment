@@ -7,30 +7,7 @@
 
 import random
 import numpy as np
-
-class QLearningAgent(object):
-
-    def __init__(self, n_actions, n_states, epsilon):
-        self.n_actions = n_actions
-        self.epsilon = epsilon
-        
-        self.q = np.zeros((n_states, self.n_actions))
-        
-    def select_action(self, state):   
-        # If a random number is within the explore rate we explore by choosing a random action
-        if np.random.uniform(0,1) <= self.epsilon:
-            return np.random.choice(range(self.n_actions))
-        
-        # If we don't explore we choose the action with the highest reward 
-        # If there are multiple actions with the same reward we choose the first one
-        return np.argmax(self.q[state])
-
-    def update(self, state, next_state, action, next_reward, alpha):
-        df = 1 # Discount factor
-
-        # Update q value
-        self.q[state][action] += alpha*(next_reward+df*max(self.q[next_state])-self.q[state][action])
-        
+              
 class Gridworld():
     def __init__(self, seed=None):
         self.rows = 7
@@ -52,6 +29,7 @@ class Gridworld():
             self.x = random.randint(0, self.columns-1)
             self.y = random.randint(0, self.rows-1)
         self.isdone = False
+        return self.state()
     
     def state(self):
         return self.y*self.columns + self.x
@@ -96,34 +74,85 @@ class Gridworld():
             return -1
         return -0.1
     
-    def render(self):
-        s = self.s.copy()
-        s[self.y, self.x] = 'p'
-        print(s.tobytes().decode('utf-8'))
 
+class DynaQAgent(object):
+    def __init__(self, n_states, n_actions, learning_rate, gamma):
+        self.n_states = n_states
+        self.n_actions = n_actions
+        self.learning_rate = learning_rate
+        self.gamma = gamma # discount factor
+        self.Q_sa = np.random.random((n_states, n_actions))
 
-env = Gridworld()
-agent = QLearningAgent
-agent = agent(n_actions=env.action_size(),n_states=env.state_size(), epsilon=0.1)
-for episode in range(1000):
-    env.reset() # Reset the environment
-    
-    while not env.done():
-        # Select and take a new action, observe reward
-        current_state = env.state()
-        action = agent.select_action(state=current_state)
-        reward = env.step(action)
-        next_state = env.state()
+        self.n = np.zeros((n_states, n_actions, n_states))
+        self.r = np.zeros((n_states, n_actions, n_states))
         
-        # Update the Q-value
-        agent.update(state=current_state, next_state=next_state, action=action, next_reward=reward, alpha=0.1)
+    def select_action(self, state, epsilon=0.1):
+        # If a random number is within the explore rate we explore by choosing a random action
+        if np.random.uniform(0,1) <= epsilon:
+            return np.random.choice(range(self.n_actions))
+        
+        # If we don't explore we choose the action with the highest reward 
+        # If there are multiple actions with the same reward we choose the first one
+        return np.argmax(self.Q_sa[state])
+        
+    def update(self, state, action, reward, done, next_state, n_planning_updates):
+        if done:
+            return
+        
+        self.n[state][action][next_state] += 1 
+        self.r[state][action][next_state] += reward
+        
+        self.Q_sa[state][action] += self.learning_rate * (reward + self.gamma * max(self.Q_sa[next_state])-self.Q_sa[state][action])
 
-q_values = agent.q
-arrows = ["↑", "↓", "←", "→"]
-for i in range(env.columns):
-    for j in range(env.rows):
-        if env.s[i][j] == "_":
-            print(arrows[np.argmax(q_values[i*env.columns + j])], end=" ")
-        else:
-            print(env.s[i][j], end=" ")
-    print()
+        for _ in range(n_planning_updates):
+            # Choose random state with n>0
+            state_sums = np.sum(self.n, axis=(1,2))
+            state = np.random.choice(np.arange(state_sums.size)[state_sums>0])
+
+            # Choose previously taken action for state s  
+            action_sums = np.sum(self.n[state], axis=1)
+            action = np.random.choice(np.arange(action_sums.size)[action_sums>0])
+            
+            # Choose next state
+            p_hat = self.n[state][action]/np.sum(self.n[state][action])
+            next_state = np.random.choice(np.arange(self.n_states), p=p_hat)
+
+            reward = self.r[state][action][next_state]/self.n[state][action][next_state]
+            
+            # Update q value
+            self.Q_sa[state][action] += self.learning_rate * (reward + self.gamma * max(self.Q_sa[next_state])-self.Q_sa[state][action])
+    
+    def train(self, env: Gridworld, episodes, n_planning_updates):
+        s = env.reset()
+        cumulative_r = 0
+        for t in range(episodes):            
+            # Select action, transition, update policy
+            a = self.select_action(s)
+            
+            r = env.step(a)
+            s_next = env.state()
+            done = env.done()
+            cumulative_r += r
+            self.update(s, a, r, done, s_next,n_planning_updates=n_planning_updates)
+
+            # Reset environment when terminated
+            if done:
+                s = env.reset()
+            else:
+                s = s_next
+                
+    def gen_traj(self, env: Gridworld, max_traj_len=15):
+        traj = []
+        traj_len = 0
+        s = env.reset()
+        while traj_len < max_traj_len:
+            a = self.select_action(s)
+            r = env.step(a)
+            s_next = env.state()
+            done = env.done()
+            traj.append((s, a, r, s_next))
+            if done:
+                break
+            s = s_next
+        return traj, r
+
