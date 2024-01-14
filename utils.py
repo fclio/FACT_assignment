@@ -11,6 +11,34 @@ from sklearn.cluster import KMeans
 from sklearn import datasets
 from sklearn import metrics
 
+from env import DynaQAgent, Gridworld
+
+  
+def generate_trajectories(num_episodes_dyna=6, num_agents_dyna=5, num_pos_trajs=10, num_neg_trajs=10, max_traj_len=15, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+    
+    env = Gridworld()
+    agents = []
+    for _ in range(num_agents_dyna):
+        agent = DynaQAgent(env.state_size(), env.action_size(), 0.1, 0.95)
+        agent.train(env, num_episodes_dyna, 5)
+        agents.append(agent)
+    
+    pos_traj = []
+    neg_traj = []
+    
+    while len(pos_traj) < num_pos_trajs or len(neg_traj) < num_neg_trajs:
+        agent = np.random.choice(agents)
+        traj, r = agent.gen_traj(env, max_traj_len=max_traj_len)
+        if r == 0:
+            continue
+        elif r == 1 and len(pos_traj) < num_pos_trajs:
+            pos_traj.append(traj)
+        elif r == -1 and len(neg_traj) < num_neg_trajs:
+            neg_traj.append(traj)
+    return pos_traj, neg_traj
+
 class XMeans:
     def loglikelihood(self, r, rn, var, m, k):
         l1 = - rn / 2.0 * mt.log(2 * mt.pi)
