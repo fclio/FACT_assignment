@@ -3,12 +3,12 @@
 # run these commands to 
 # pip install ale-py
 # pip install git+https://github.com/takuseno/d4rl-atari
-# pip install gym[accept-rom-license]
+# pip install "gym[atari,accept-rom-license]"
 
 import gym
 import ale_py 
 import d4rl_atari
-import torch
+# import torch
 import numpy as np
 
 class Dataloader():
@@ -25,7 +25,7 @@ class Dataloader():
         
         observation = env.reset()
         # observation, reward, terminal, info = env.step(env.action_space.sample())
-        observation, reward, terminal, truncated, info = env.step(env.action_space.sample())
+        observation, reward, terminal, info = env.step(env.action_space.sample())
 
 
         dataset = env.get_dataset()
@@ -62,6 +62,6 @@ class Dataloader():
 
 if __name__ == "__main__":
     dl = Dataloader()
-    dl.load_sq_data()   
-    dl.dataset_info()
+    dataset = dl.load_sq_data()   
+    dl.dataset_info(dataset)
 
