@@ -188,6 +188,13 @@ class GPT(nn.Module):
             nn.Embedding(config.vocab_size, config.n_embd), nn.Tanh()
         )
         nn.init.normal_(self.action_embeddings[0].weight, mean=0.0, std=0.02)
+        
+    def load_pretrained(self, checkpoint_path, cpu=False):
+        if cpu:
+            checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+        else:
+            checkpoint = torch.load(checkpoint_path)
+        self.load_state_dict(checkpoint)
 
     def get_block_size(self):
         return self.block_size
@@ -390,7 +397,9 @@ if __name__ == "__main__":
     )
     model = GPT(mconf)
 
-    checkpoint_path = "checkpoints/Breakout_123.pth"  # or Pong, Qbert, Seaquest
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint)
+    model.load_pretrained("checkpoints/Seaquest_123.pth")
+
+    # checkpoint_path = "checkpoints/Breakout_123.pth"  # or Pong, Qbert, Seaquest
+    # checkpoint = torch.load(checkpoint_path)
+    # model.load_state_dict(checkpoint)
 
