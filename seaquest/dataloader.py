@@ -6,28 +6,33 @@
 # pip install "gym[atari,accept-rom-license]"
 
 import gym
-import ale_py 
 import d4rl_atari
+<<<<<<< HEAD
 # import torch
+=======
+>>>>>>> main
 import numpy as np
 
 class Dataloader():
     def __init__(self) -> None:
         pass
 
-    def load_sq_data(self, version='seaquest-mixed-v0'):
+    def load_sq_data(self, version='Seaquest-ram-v0'):
         """
         Load the seaquest dataset from the d4rl-atari repo.
         """
         print("Loading Seaquest Dataset")
 
         env = gym.make(version) 
+<<<<<<< HEAD
         
         observation = env.reset()
         # observation, reward, terminal, info = env.step(env.action_space.sample())
         observation, reward, terminal, info = env.step(env.action_space.sample())
 
 
+=======
+>>>>>>> main
         dataset = env.get_dataset()
         return dataset
     
@@ -47,18 +52,6 @@ class Dataloader():
         print("Terminals:")
         print(np.unique(dataset['terminals']))  # terminal data in (1000000,)
         print(dataset['terminals'].shape)
-
-    # def load_hc_data(self, version='halfcheetah-medium-v0'):
-    #     """
-    #     Load the halfcheetah dataset from the d4rl repo.
-    #     """
-    #     env = gym.make(version) 
-        
-    #     observation = env.reset()
-    #     observation, reward, terminal, info = env.step(env.action_space.sample())
-
-    #     dataset = env.get_dataset()
-    #     return dataset
 
 if __name__ == "__main__":
     dl = Dataloader()

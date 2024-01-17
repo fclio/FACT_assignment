@@ -1,4 +1,3 @@
-import torch
 from decision_transformer_atari import GPTConfig, GPT
 
 def run_model(vocab_size=18, block_size=90, model_type="reward_conditioned", timesteps=2719):

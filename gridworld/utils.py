@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn import datasets
 from sklearn import metrics
 
-from env import DynaQAgent, Gridworld
+from grindworld.env import DynaQAgent, Gridworld
 
   
 def generate_trajectories(num_episodes_dyna=6, num_agents_dyna=5, num_pos_trajs=10, num_neg_trajs=10, max_traj_len=15, seed=None):
