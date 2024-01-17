@@ -7,10 +7,6 @@
 
 import gym
 import d4rl_atari
-<<<<<<< HEAD
-# import torch
-=======
->>>>>>> main
 import numpy as np
 
 class Dataloader():
@@ -24,15 +20,6 @@ class Dataloader():
         print("Loading Seaquest Dataset")
 
         env = gym.make(version) 
-<<<<<<< HEAD
-        
-        observation = env.reset()
-        # observation, reward, terminal, info = env.step(env.action_space.sample())
-        observation, reward, terminal, info = env.step(env.action_space.sample())
-
-
-=======
->>>>>>> main
         dataset = env.get_dataset()
         return dataset
     

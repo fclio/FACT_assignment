@@ -354,6 +354,7 @@ class GPT(nn.Module):
 
         x = self.drop(token_embeddings + position_embeddings)
         x = self.blocks(x)
+        traj_emb = x
         x = self.ln_f(x)
         logits = self.head(x)
 
@@ -375,7 +376,7 @@ class GPT(nn.Module):
                 logits.reshape(-1, logits.size(-1)), targets.reshape(-1)
             )
 
-        return logits, loss
+        return logits, loss, traj_emb
 
 
 if __name__ == "__main__":
