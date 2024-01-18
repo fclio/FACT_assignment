@@ -1,6 +1,3 @@
-from agents.SAC_Discrete import SAC_Discrete
-from agents.utilities.Config import Config
-
 from d3rlpy.algos import DiscreteSAC, DiscreteSACConfig
 
 def get_agent():
@@ -20,10 +17,7 @@ def get_agent():
     # config.randomise_random_seed = True
     # config.save_model = True
 
-    disc_sac_config = DiscreteSACConfig(
-
-    )
-    
+    disc_sac_config = DiscreteSACConfig()
     disc_sac = DiscreteSAC(
         config=disc_sac_config,
         device="cpu"
