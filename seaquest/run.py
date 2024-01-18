@@ -6,7 +6,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from seaquest.gpt import GPTConfig, GPT
+from gpt import GPTConfig, GPT
+from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
+from pyclustering.cluster.xmeans import xmeans
+# from d3rlpy.algos import DiscreteSAC, DiscreteSACConfig
+
 
 # def load_sq_data(self, version='Seaquest-ram-v0'):
 #     """
@@ -25,7 +29,7 @@ for dataset_name in datasets_names:
         datasets[dataset_name] = np.load(f, allow_pickle=False)
 
 sub_traj_len = 30
-num_trajs = 60
+num_trajs = 717
 sub_trajs = []
 current_traj = []
 num_sar = 0
@@ -81,7 +85,7 @@ model = GPT(mconf)
 
 model.load_pretrained("checkpoints/Seaquest_123.pth", cpu=True)
 
-batch_size = 50
+batch_size = 30
 sub_traj_embs = np.empty((num_sub_trajs, 128))
 for idx in range(int(np.ceil(num_sub_trajs/batch_size))):
     obs = observation_traj[batch_size*idx:batch_size*(idx+1)]
@@ -92,14 +96,69 @@ for idx in range(int(np.ceil(num_sub_trajs/batch_size))):
     sub_traj_embs[batch_size*idx:batch_size*(idx+1)] = emb.detach().numpy()
 
 
-pca = PCA(n_components=2)
-pca_traj_embeddings = pca.fit_transform(sub_traj_embs)
-plotting_data = {'feature 1': pca_traj_embeddings[:, 0], 'feature 2': pca_traj_embeddings[:, 1]}
-                 
-df = pd.DataFrame(plotting_data)
 
-plt.figure()
-sns.scatterplot(x='feature 1', y='feature 2', data=df)
-# plt.title('PCA: Trajectory Embeddings')
-# plt.legend()
-plt.show()
+# Prepare initial centers - amount of initial centers defines amount of clusters from which X-Means will
+# start analysis.
+amount_initial_centers = 2
+initial_centers = kmeans_plusplus_initializer(sub_traj_embs, amount_initial_centers).initialize()
+ 
+# Create instance of X-Means algorithm. The algorithm will start analysis from 2 clusters, the maximum
+# number of clusters that can be allocated is 10.
+xmeans_instance = xmeans(sub_traj_embs, initial_centers, 8)
+xmeans_instance.process()
+ 
+# Extract clustering results: clusters and their centers
+clusters = xmeans_instance.get_clusters()
+centers = xmeans_instance.get_centers()
+
+
+points_per_cluster = 50
+trajs_in_cluster = [0]*len(clusters)
+traj_cluster_labels = np.zeros(len(sub_traj_embs), dtype=int)
+emb_ids = []
+for cluster_id, cluster in enumerate(clusters):
+    for traj_id in cluster:
+        traj_cluster_labels[traj_id] = cluster_id
+        if trajs_in_cluster[cluster_id] < points_per_cluster:
+            trajs_in_cluster[cluster_id] += 1
+            emb_ids.append(traj_id)
+palette = sns.color_palette('husl', len(clusters) + 1)
+
+pca_traj = PCA(n_components=2)
+pca_traj_embeds = pca_traj.fit_transform(sub_traj_embs)
+
+# plotting_data = {'feature 1': pca_traj_embeds[emb_ids, 0],
+#                  'feature 2': pca_traj_embeds[emb_ids, 1],
+#                  'cluster id': traj_cluster_labels[emb_ids]}
+# df = pd.DataFrame(plotting_data)
+
+# plt.figure(figsize=(4,3))
+# data_ax = sns.scatterplot(x='feature 1',
+#                           y='feature 2',
+#                           hue='cluster id',
+#                           palette=palette[:len(clusters)],
+#                           data=df,
+#                           legend=True)
+# plt.legend(title = '$c_{j}$', loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=5)
+# # plt.legend(title = '$c_{j}$', loc='center left', bbox_to_anchor=(1., 0.7), ncol=2)
+# # for cid, _ in enumerate(cluster_data_embeds):
+# #     data_ax.text(pca_data_embeds[:, 0][cid],
+# #                  pca_data_embeds[:, 1][cid],
+# #                  str(cid),
+# #                  horizontalalignment='left',
+# #                  size='medium',
+# #                  color='black',
+# #                  weight='semibold')
+# plt.tight_layout()
+# # plt.savefig('./traj_clustering_grid.pdf')
+# plt.show()
+
+
+# disc_sac_config = DiscreteSACConfig()
+# disc_sac = DiscreteSAC(
+#     config=disc_sac_config,
+#     device="cpu"
+# )
+
+# disc_sac.fit(sub_traj_embs, n_steps=10000)
+# actions = disc_sac.predict(observation_traj[0])
