@@ -3,7 +3,7 @@
 # run these commands to 
 # pip install ale-py
 # pip install git+https://github.com/takuseno/d4rl-atari
-# pip install gym[accept-rom-license]
+# pip install "gym[atari,accept-rom-license]"
 
 import gym
 import d4rl_atari
@@ -42,6 +42,6 @@ class Dataloader():
 
 if __name__ == "__main__":
     dl = Dataloader()
-    dl.load_sq_data()   
-    dl.dataset_info()
+    dataset = dl.load_sq_data()   
+    dl.dataset_info(dataset)
 
