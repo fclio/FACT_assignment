@@ -185,7 +185,7 @@ for idx in range(len(clusters)):
 agents = []
 data_embeddings = [] 
 explanation_predictions = []
-for cluster_dataset in cluster_datasets:
+for idx, cluster_dataset in enumerate(cluster_datasets):
     disc_sac = DiscreteSAC(
         actor_learning_rate=3e-4,
         critic_learning_rate=3e-4,
@@ -193,11 +193,11 @@ for cluster_dataset in cluster_datasets:
         batch_size=256,
         n_steps=100000, 
         use_gpu=True)
-    disc_sac.fit(cluster_dataset, n_steps=10000)
-    disc_sac.save_model("seaquest/data/agent_c{}.pt".format(idx))
-    agents.append(disc_sac)
+    # disc_sac.fit(cluster_dataset, n_steps=10000)
+    # disc_sac.save_model("seaquest/data/agent_c{}.pt".format(idx))
     data_embeddings.append(get_data_embedding(cluster_dataset))
-    # disc_sac = DiscreteSAC.load_model("seaquest/data/agent_c0.pt")
+    disc_sac = DiscreteSAC.load_model("seaquest/data/agent_c{}.pt".format(idx))
+    agents.append(disc_sac)
     prediction = []
     for observation in dataset.observations:
         prediction.append(disc_sac.predict(observation))
