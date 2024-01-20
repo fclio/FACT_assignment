@@ -1,4 +1,6 @@
 from d3rlpy.algos import DiscreteSAC, DiscreteSACConfig
+import gzip
+import numpy as np
 
 def get_agent():
     
@@ -17,6 +19,12 @@ def get_agent():
     # config.randomise_random_seed = True
     # config.save_model = True
 
+    datasets_names = ["observation", "action", "reward", "terminal"]
+    datasets = {}
+    for dataset_name in datasets_names:
+        with gzip.open("data/"+dataset_name+".gz", 'rb') as f:
+            datasets[dataset_name] = np.load(f, allow_pickle=False)
+    
     disc_sac_config = DiscreteSACConfig()
     disc_sac = DiscreteSAC(
         config=disc_sac_config,
