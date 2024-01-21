@@ -10,23 +10,22 @@
 # export LD_LIBRARY_PATH=/home/bart/miniconda3/envs/decision-transformer-atari/lib
 
 import numpy as np
-# import gzip
 import torch
 import time 
-
-from sklearn.decomposition import PCA
-from gpt import GPTConfig, GPT
+import pandas as pd
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from pyclustering.cluster.xmeans import xmeans
-from d3rlpy.datasets import MDPDataset
-from d3rlpy.datasets import get_dataset
-from d3rlpy.datasets import MDPDataset
+from d3rlpy.datasets import MDPDataset, get_dataset
 from d3rlpy.algos import DiscreteSAC
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy.stats import wasserstein_distance
 
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from gpt import GPTConfig, GPT
+
+# Constant that maps indices to seaquest action names
 ACTION_DICT = {
     0: 'NOOP',
     1: 'FIRE',
@@ -48,11 +47,22 @@ ACTION_DICT = {
     17: 'DOWNLEFTFIRE'
 }
 
+
 def create_trajectories_from_dataset(dataset, sub_traj_len=30):
     """
     Split up the dataset into sub trajectories of length sub_traj_len.
     If a terminal is encountered before the sub_traj_len is reached, 
     the sub trajectory is padded with zeros.
+    
+    Args:
+    - dataset: MDPDataset
+    - sub_traj_len: int, length of sub trajectories
+    
+    Returns:
+    - observation_traj: torch.Tensor, shape (num_sub_trajs, sub_traj_len, 4, 84, 84)
+    - action_traj: torch.Tensor, shape (num_sub_trajs, sub_traj_len, 1)
+    - reward_traj: torch.Tensor, shape (num_sub_trajs, sub_traj_len, 1)
+    - num_sub_trajs: int, number of sub trajectories
     """ 
     sub_traj_len = 30
     num_trajs = 717
@@ -96,7 +106,20 @@ def create_trajectories_from_dataset(dataset, sub_traj_len=30):
             
     return observation_traj, action_traj, reward_traj, num_sub_trajs
 
+
 def get_decision_transformer(vocab_size=18, block_size=90, model_type="reward_conditioned", timesteps=2719):
+    """
+    Loads the pretrained decision transformer model.
+    
+    Args:
+    - vocab_size: int, size of the action space
+    - block_size: int, length of the sub trajectories
+    - model_type: str, type of decision transformer
+    - timesteps: int, maximum number of timesteps
+    
+    Returns:
+    - model: GPT, pretrained decision transformer model
+    """
     mconf = GPTConfig(
         vocab_size,
         block_size,
@@ -112,7 +135,21 @@ def get_decision_transformer(vocab_size=18, block_size=90, model_type="reward_co
     
     return model
 
+
 def encode_trajectories(observation_traj, action_traj, reward_traj, num_sub_trajs, batch_size=30):
+    """
+    Encodes the sub trajectories using the decision transformer with batching.
+    
+    Args:
+    - observation_traj: torch.Tensor, shape (num_sub_trajs, sub_traj_len, 4, 84, 84)
+    - action_traj: torch.Tensor, shape (num_sub_trajs, sub_traj_len, 1)
+    - reward_traj: torch.Tensor, shape (num_sub_trajs, sub_traj_len, 1)
+    - num_sub_trajs: int, number of sub trajectories
+    - batch_size: int, batch size for encoding
+    
+    Returns:
+    - sub_traj_embs: np.array, shape (num_sub_trajs, 128)
+    """
     vocab_size = 18
     block_size = 90
     model_type = "reward_conditioned"  
@@ -122,15 +159,31 @@ def encode_trajectories(observation_traj, action_traj, reward_traj, num_sub_traj
     
     sub_traj_embs = np.empty((num_sub_trajs, 128))
     for idx in range(int(np.ceil(num_sub_trajs/batch_size))):
+        # Create (state, action, reward) tuples for the batch
         obs = observation_traj[batch_size*idx:batch_size*(idx+1)]
         act = action_traj[batch_size*idx:batch_size*(idx+1)]
         rew = reward_traj[batch_size*idx:batch_size*(idx+1)]
+        
+        # We return the embeddings from the forward call
+        # before it is passed through the decoder head
         _, _, emb = model(obs, act, rtgs=rew, timesteps=torch.tensor([[[timesteps]]]))
         emb = emb.mean(dim=1)
         sub_traj_embs[batch_size*idx:batch_size*(idx+1)] = emb.detach().numpy()
+        
     return sub_traj_embs
 
+
 def plot_clusters(cluster_data_embeds, sub_traj_embs, traj_cluster_labels, clusters, emb_ids):
+    """
+    Brings down dimensions of the embeddings to 2D and plots the clusters.
+    
+    Args: 
+    - cluster_data_embeds: np.array, shape (num_clusters, 128)
+    - sub_traj_embs: np.array, shape (num_sub_trajs, 128)
+    - traj_cluster_labels: np.array, shape (num_sub_trajs,)
+    - clusters: list, list of clusters
+    - emb_ids: list, list of indices of embeddings to plot
+    """
     palette = sns.color_palette('husl', len(clusters) + 1)
     pca_traj = PCA(n_components=2)
     pca_traj_embeds = pca_traj.fit_transform(sub_traj_embs)
@@ -161,7 +214,16 @@ def plot_clusters(cluster_data_embeds, sub_traj_embs, traj_cluster_labels, clust
     plt.savefig('./traj_clustering_grid.pdf')
     plt.show()
 
+
 def cluster_trajectories(sub_traj_embs, plot=False, num_clusters=8):
+    """
+    Cluster the trajectory embeddings using X-Means.
+    
+    Args:
+    - sub_traj_embs: np.array, shape (num_sub_trajs, 128)
+    - plot: bool, whether to plot the clusters
+    - num_clusters: int, number of clusters to cluster the embeddings into
+    """
     # Prepare initial centers - amount of initial centers defines amount of clusters from which X-Means will
     # start analysis.
     amount_initial_centers = 2
@@ -194,11 +256,27 @@ def cluster_trajectories(sub_traj_embs, plot=False, num_clusters=8):
             
     return clusters, cluster_traj_embeddings, traj_cluster_labels
 
-# cluster embeddings
+
 def get_data_embedding(traj_embeddings):
+    """
+    Create a data embedding by averaging the trajectory embeddings.
+    Basically normalized softmax.
+    """
     return np.exp(np.array(traj_embeddings).sum(axis=0)/10.)/np.sum(np.exp(np.array(traj_embeddings).sum(axis=0)/10.))
 
+
 def compute_dataset_embeddings(cluster_traj_embeddings):
+    """
+    Compute original and complementary dataset embeddings from cluster 
+    embeddings. 
+    
+    Args:
+    - cluster_traj_embeddings: list, list of cluster embeddings
+    
+    Returns:
+    - original_data_embedding: np.array, shape (128,)
+    - compl_dataset_embeddings: list, list of complementary dataset embeddings
+    """
     cluster_embeddings = []
     for cluster in cluster_traj_embeddings:
         cluster_embeddings.append(get_data_embedding(cluster))  
@@ -212,7 +290,20 @@ def compute_dataset_embeddings(cluster_traj_embeddings):
     
     return original_data_embedding, compl_dataset_embeddings
 
+
 def create_complementary_dataset(dataset, sub_traj_embs, traj_cluster_labels, clusters):
+    """
+    Create complementary datasets for each cluster.
+    
+    Args:
+    - dataset: MDPDataset
+    - sub_traj_embs: np.array, shape (num_sub_trajs, 128)
+    - traj_cluster_labels: np.array, shape (num_sub_trajs,)
+    - clusters: list, list of clusters
+    
+    Returns:
+    - cluster_datasets: list, list of complementary datasets
+    """
     observations_np = dataset.observations[:len(sub_traj_embs)*30]
     actions_np = dataset.actions[:len(sub_traj_embs)*30]
     rewards_np = dataset.rewards[:len(sub_traj_embs)*30]
@@ -232,8 +323,24 @@ def create_complementary_dataset(dataset, sub_traj_embs, traj_cluster_labels, cl
     
     return cluster_datasets
 
+
 def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model=False):
+    """
+    Compute explanation policies and predictions on first 1000 observations
+    for each complementary dataset.
+    
+    Args:
+    - dataset: MDPDataset
+    - cluster_datasets: list, list of complementary datasets
+    - env: gym.Env, environment
+    - load_model: bool, whether to load the pretrained model
+    
+    Returns:
+    - agents: list, list of explanation policies
+    - explanation_predictions: list, list of predictions of the explanation policies
+    """
     agents = []
+    explanation_predictions = []
     for idx, cluster_dataset in enumerate(cluster_datasets):
         discrete_sac = DiscreteSAC(
             actor_learning_rate=3e-4,
@@ -252,8 +359,7 @@ def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model
             
         agents.append(discrete_sac)
         
-        # Make Predictions
-        explanation_predictions = []
+        # Make Predictions        
         predictions = []
         for observation in dataset.observations[:1000]:
             predictions.append(discrete_sac.predict([observation])[0])
@@ -261,7 +367,20 @@ def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model
         
     return agents, explanation_predictions 
 
+
 def compute_original_policy(dataset, env=None, load_model=False):
+    """
+    Compute original policy and predictions on first 1000 observations.
+    
+    Args:
+    - dataset: MDPDataset
+    - env: gym.Env, environment
+    - load_model: bool, whether to load the pretrained model
+    
+    Returns:
+    - original_policy: DiscreteSAC, original policy
+    - original_predictions: list, list of predictions of the original policy
+    """
     original_policy = DiscreteSAC(
         actor_learning_rate=3e-4,
         critic_learning_rate=3e-4,
@@ -284,6 +403,21 @@ def compute_original_policy(dataset, env=None, load_model=False):
     return original_policy, original_predictions
 
 def generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters):
+    """
+    Cluster attribution algorithm from the paper. Attributes responsible cluster for first
+    100 observations.
+    
+    Args:
+    - dataset: MDPDataset
+    - original_predictions: list, list of predictions of the original policy
+    - explanation_predictions: list, list of predictions of the explanation policies
+    - original_data_embedding: np.array, shape (128,)
+    - compl_dataset_embeddings: list, list of complementary dataset embeddings
+    - clusters: list, list of clusters
+    
+    Returns:
+    - attributions: list, list of attributions
+    """
     attributions = []
     
     for idx, (observation, action, reward, terminal)  in enumerate(zip(dataset.observations, dataset.actions, dataset.rewards, dataset.terminals)):
@@ -315,7 +449,7 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
         print(f'New Action - {ACTION_DICT[responsible_action]}')
 
         print(f'Responsible data combination - data id {responsible_cluster_id}')
-        print(f'Responsible trajectory id {clusters[responsible_cluster_id - 1]}')
+        # print(f'Responsible trajectory id {clusters[responsible_cluster_id - 1]}')
         if len(clusters[responsible_cluster_id - 1]):
             cid_list = list(range(len(clusters)))
             cid_list.pop(responsible_cluster_id - 1)
@@ -335,7 +469,19 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
     return attributions
     
 
-def run_trajectory_attribution(load_emb = False, load_model=False, save_attributions=True):
+def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters=False, save_attributions=True):
+    """
+    Runs the full code to generate cluster attributions for the Seaquest environment.
+    
+    Args:
+    - load_emb: bool, whether to load the trajectory embeddings
+    - load_model: bool, whether to load the pretrained models
+    - plot_clusters: bool, whether to plot the clusters
+    - save_attributions: bool, whether to save the attributions
+    
+    Returns:
+    - attributions: list, list of attributions
+    """
     # Load dataset and environment
     start = time.time()
     dataset, env = get_dataset('seaquest-mixed-v4')
@@ -352,7 +498,7 @@ def run_trajectory_attribution(load_emb = False, load_model=False, save_attribut
         sub_traj_embs = np.load("data/sub_traj_embs.npy")
     
     # Cluster trajectories
-    clusters, cluster_traj_embeddings, traj_cluster_labels = cluster_trajectories(sub_traj_embs, plot=False, num_clusters=8)
+    clusters, cluster_traj_embeddings, traj_cluster_labels = cluster_trajectories(sub_traj_embs, plot=plot_clusters, num_clusters=8)
     
     # Compute original dataset embedding and complementary dataset embeddings
     original_data_embedding, compl_dataset_embeddings = compute_dataset_embeddings(cluster_traj_embeddings)
@@ -361,19 +507,21 @@ def run_trajectory_attribution(load_emb = False, load_model=False, save_attribut
     cluster_datasets = create_complementary_dataset(dataset, sub_traj_embs, traj_cluster_labels, clusters)
    
    # Fit explanation policies
-    explanation_policies, explanation_predictions = compute_explanation_policies(cluster_datasets, env=env, load_model=False)
+    explanation_policies, explanation_predictions = compute_explanation_policies(dataset, cluster_datasets, env=env, load_model=load_model)
    
    # Fit original policy
-    original_policy, original_predictions = compute_original_policy(dataset, env=env, load_model=False)
+    original_policy, original_predictions = compute_original_policy(dataset, env=env, load_model=load_model)
    
     # Generate attributions
     attributions = generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
     if save_attributions:
         np.save("data/attributions.npy", attributions)
     
+    return attributions
+    
 if __name__ == "__main__":
     
-    run_trajectory_attribution(load_emb = True, load_model=True, save_attributions=True)
+    attributions = run_trajectory_attribution(load_emb = True, load_model=True, plot_clusters=False, save_attributions=True)
 
     # start = time.time()
     # dataset, env = get_dataset('seaquest-mixed-v4')
