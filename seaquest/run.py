@@ -425,22 +425,35 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
             break
         if terminal: 
             continue
-        
+              
         original_action = original_predictions[idx][0]
         agent_predictions = []
         for predictions in explanation_predictions:
             agent_predictions.append(predictions[idx])
         
         cluster_distance = []
-        alternative_actions = []
-        for cluster_idx in np.where(np.array(agent_predictions) != original_action)[0]:
-            cluster_distance.append(wasserstein_distance(original_data_embedding, compl_dataset_embeddings[cluster_idx]))
-        
-            alternative_actions.append(cluster_idx)
-        
+        # alternative_actions = []
+        for cluster_idx in range(len(explanation_predictions)):
+            if agent_predictions[cluster_idx] != original_action:
+                cluster_distance.append(wasserstein_distance(original_data_embedding, compl_dataset_embeddings[cluster_idx]))
+            
+                # alternative_actions.append(cluster_idx)
+            # To keep cluster-order intact
+            else: 
+                cluster_distance.append(1e9)
+                    
         responsible_cluster_id = np.argsort(cluster_distance)[0]
         responsible_action = agent_predictions[responsible_cluster_id]
-            
+        
+        if responsible_action == original_action:
+            print('-'*10)
+            print("SAME ACTION")
+            print("Original action", original_predictions[idx])
+            for i, pred in enumerate(explanation_predictions):
+                print(f"Explanation actions {i}", pred[idx])
+            print("Responsible action", responsible_action)
+            print('-'*10)
+        
         print('-'*10)
         print(f'State - {idx}')
         print(f'Distance - {cluster_distance[responsible_cluster_id]}')
@@ -520,4 +533,4 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
     
 if __name__ == "__main__":
     
-    attributions = run_trajectory_attribution(load_emb = True, load_model=True, plot_clusters=False, save_attributions=True)
+    attributions = run_trajectory_attribution(load_emb=True, load_model=True, plot_clusters=False, save_attributions=True)
