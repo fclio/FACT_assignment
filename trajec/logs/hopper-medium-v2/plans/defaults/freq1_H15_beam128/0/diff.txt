@@ -1,0 +1,38 @@
+diff --git a/environment.yml b/environment.yml
+index 19b5c9d..b48d1c2 100644
+--- a/environment.yml
++++ b/environment.yml
+@@ -9,8 +9,9 @@ dependencies:
+ - pip:
+     - -f https://download.pytorch.org/whl/torch_stable.html
+     - numpy
+-    - gym==0.18.0
+-    - mujoco-py==2.0.2.13
++    - wheel==0.38.4
++    - setuptools==65.5.0
++    - gym==0.20.0
+     - matplotlib==3.3.4
+     - torch==1.9.1+cu111
+     - typed-argument-parser
+diff --git a/trajectory/datasets/sequence.py b/trajectory/datasets/sequence.py
+index 18eefff..c0444e0 100644
+--- a/trajectory/datasets/sequence.py
++++ b/trajectory/datasets/sequence.py
+@@ -33,7 +33,7 @@ def segment(observations, terminals, max_path_length):
+ 
+     ## pad trajectories to be of equal length
+     trajectories_pad = np.zeros((n_trajectories, max_path_length, observation_dim), dtype=trajectories[0].dtype)
+-    early_termination = np.zeros((n_trajectories, max_path_length), dtype=np.bool)
++    early_termination = np.zeros((n_trajectories, max_path_length), dtype=bool)
+     for i, traj in enumerate(trajectories):
+         path_length = path_lengths[i]
+         trajectories_pad[i,:path_length] = traj
+@@ -124,7 +124,7 @@ class SequenceDataset(torch.utils.data.Dataset):
+         ], axis=1)
+         self.termination_flags = np.concatenate([
+             self.termination_flags,
+-            np.ones((n_trajectories, sequence_length-1), dtype=np.bool),
++            np.ones((n_trajectories, sequence_length-1), dtype=bool),
+         ], axis=1)
+ 
+     def __len__(self):
