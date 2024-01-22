@@ -3,3 +3,4 @@ __pycache__/
 Open Notebook.onetoc2 
 seaquest/data/
 d3rlpy_logs/
+checkpoints
