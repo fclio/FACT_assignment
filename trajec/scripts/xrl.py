@@ -22,6 +22,8 @@ from sklearn.decomposition import PCA
 from pyclustering.cluster.xmeans import xmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 
+from scipy.stats import wasserstein_distance
+
 class Parser(utils.Parser):
     dataset: str = 'halfcheetah-medium-expert-v2'
     config: str = 'config.offline'
@@ -124,16 +126,15 @@ def cluster_trajectories_2(trajectories):
     xmeans_instance = xmeans(trajectories, initial_centers, 10)
     xmeans_instance.process()
     
-    # Extract clustering results: clusters and their centers
-    clusters = xmeans_instance.get_clusters()
-    centers = xmeans_instance.get_centers()
+    # Extract clustering results: clusters
+    idxs_per_cluster = xmeans_instance.get_clusters()
 
-    clusters_2 = []
+    clusters = []
     for i in range(len(trajectories)):
-        for j in range(len(clusters)):
-            if i in clusters[j]: clusters_2.append(j)
+        for j in range(len(idxs_per_cluster)):
+            if i in idxs_per_cluster[j]: clusters.append(j)
 
-    return np.array(clusters_2)
+    return idxs_per_cluster, np.array(clusters)
  
 # https://github.com/sascha-kirch/ML_Notebooks/blob/main/Softmax_Temperature.ipynb
 def softmax(x, temp):
@@ -173,6 +174,29 @@ def embed_trajectory(gpt, discretizer, observations, actions, rewards, preproces
     return emb
 
 
+def create_complementary_dataset(dataset, idxs, trajectory_length=10):
+    observations = []
+    actions = []
+    rewards = []
+    terminals = []
+    for i in range(1000):
+        if i not in idxs:
+            observations += list(dataset.observations[1000*i:1000*i+trajectory_length])
+            actions += list(dataset.actions[1000*i:1000*i+trajectory_length])
+            rewards += list(dataset.rewards[1000*i:1000*i+trajectory_length])
+            terminals += list(dataset.terminals[1000*i:1000*i+trajectory_length])
+
+    new_dataset = d3rlpy.dataset.MDPDataset(
+        observations=np.array(observations),
+        actions=np.array(actions),
+        rewards=np.array(rewards),
+        terminals=np.array(terminals)
+    )
+    return new_dataset
+    
+
+
+
 def main():
     # args = Parser().parse_args('plan')
 
@@ -208,7 +232,7 @@ def main():
     # preprocess_fn = datasets.get_preprocess_fn(env.name)
 
     # # dataset
-    # dataset_d3, env = d3rlpy.datasets.get_dataset("halfcheetah-medium-v2")
+    dataset_d3, env = d3rlpy.datasets.get_dataset("halfcheetah-medium-v2")
 
     # env = gym.make('halfcheetah-medium-v2')
     # dataset_d4 = d4rl.qlearning_dataset(env)
@@ -225,13 +249,14 @@ def main():
     # ###### main loop ######
     # #######################
 
-    # trajectory_length = 10 # 10 = max
+    trajectory_length = 10 # 10 = max
 
     # embeddings = []
     # for i in range(1000):
     #     observations = dataset_d3.observations[1000*i:1000*i+trajectory_length]
     #     actions = dataset_d3.actions[1000*i:1000*i+trajectory_length]
     #     rewards = dataset_d3.rewards[1000*i:1000*i+trajectory_length]
+    #     terminals = dataset_d3.terminals[1000*i:1000*i+trajectory_length]
     #     emb = embed_trajectory(gpt, discretizer, observations, actions, rewards, preprocess_fn)
     #     embeddings.append(emb)
     # embeddings = np.array(embeddings)
@@ -245,7 +270,7 @@ def main():
     pca_embeddings = pca.fit_transform(embeddings)
     np.save("pca.py", pca_embeddings)
 
-    clusters = cluster_trajectories_2(embeddings)
+    idxs_per_cluster, clusters = cluster_trajectories_2(embeddings)
     # print(clusters)
     # return
     np.save("clusters.npy", clusters)
@@ -254,29 +279,92 @@ def main():
 
     d_orig = generate_data_embedding(embeddings)
     unique_clusters = np.unique(clusters)
+    
     d_j = []
-    for j in unique_clusters:
+    complementary_datasets = []
+    for j in np.sort(unique_clusters):
+        print(j)
         d_j.append(generate_data_embedding(embeddings[clusters != j]))
         plt.scatter(pca_embeddings[clusters == j][:,0], pca_embeddings[clusters == j][:,1], label=j)
+        complementary_datasets.append(create_complementary_dataset(dataset_d3, idxs_per_cluster[j], trajectory_length))
+    
+    original_dataset = create_complementary_dataset(dataset_d3, [], trajectory_length)
+
+    print(complementary_datasets, original_dataset)
 
     plt.legend()
     plt.show()
 
-    # TODO
-    # get list of trajectories (preferrably by dataset idxs)
-    # transform to list of embeddings
-    # cluster
+    agent_orig = d3rlpy.algos.SAC(
+        actor_learning_rate=3e-4,
+        critic_learning_rate=3e-4,
+        temp_learning_rate=3e-4,
+        batch_size=256)
 
-    # clusters = cluster_trajectories(trajectory_embeddings)
+    print(agent_orig)
 
-    # d_orig = generate_data_embedding(trajectory_embeddings)
+    agent_orig.fit(original_dataset, n_steps=10000)
 
-    # d_j = []
-    # unique_clusters = np.unique(clusters)
-    # for j in unique_clusters:
-    #     print(trajectory_embeddings[clusters != j])
-    #     d_j.append(trajectory_embeddings[clusters != j])
+    agents_compl = []
+
+    for dset in complementary_datasets:
+        agent = d3rlpy.algos.SAC(
+            actor_learning_rate=3e-4,
+            critic_learning_rate=3e-4,
+            temp_learning_rate=3e-4,
+            batch_size=256)
+        agent.fit(dset, n_steps=10000)
+        agents_compl.append(agent)
+
+    action_orig = agent_orig.predict(dataset_d3.observations[0])
+
+    actions_compl = []
+    for agent in agents_compl:
+        actions_compl.append(agent.predict(dataset_d3.observations[0]))
+    
+    action_dists = []
+    for action in actions_compl:
+        action_dists.append(np.linalg.norm(action_orig-action))
+
+    k = 3
+    topk = np.argpartition(action_dists, -k)[-k:]
+
+    d_w = {}
+    for idx in topk:
+        d_w[idx] = wasserstein_distance(d_j[idx], d_orig)
+
+    cluster_assignment = min(d_w, key=d_w.get)
+    print("explanation assigned to cluster", cluster_assignment)
 
     
+def assignment_test():
+    action_orig = np.random.rand(10)
+    d_orig = np.random.rand(5)
+
+    actions_compl = np.random.rand(6,10)
+    d_j = np.random.rand(6,5)
+
+    action_dists = []
+    for action in actions_compl:
+        action_dists.append(np.linalg.norm(action_orig-action))
+
+    print(action_dists)
+
+    k = 3
+    topk = np.argpartition(action_dists, -k)[-k:]
+
+    print(topk)
+
+    d_w = {}
+    for idx in topk:
+        d_w[idx] = wasserstein_distance(d_j[idx], d_orig)
+
+    print(d_w)
+
+    cluster_assignment = min(d_w, key=d_w.get)
+    print("explanation assigned to cluster", cluster_assignment)
+
+
 if __name__ == "__main__":
-    main()
+    # main()
+    assignment_test()
