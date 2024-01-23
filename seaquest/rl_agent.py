@@ -33,82 +33,51 @@ def get_agent():
     #     with gzip.open("data/"+dataset_name+".gz", 'rb') as f:
     #         datasets[dataset_name] = np.load(f, allow_pickle=False)
     
-    # dataset, env = get_dataset('seaquest-mixed-v4')
+    dataset, env = get_dataset('seaquest-mixed-v4')
     # # # env = gym.make('seaquest-mixed-v4')
 
     # # # print(datasets["observation"][0].shape)
     
-    # discrete_sac = DiscreteSAC(
-    #     actor_learning_rate=3e-4,
-    #     critic_learning_rate=3e-4,
-    #     temp_learning_rate=3e-4,
-    #     batch_size=256,
-    #     n_steps=100000, 
-    #     use_gpu=False
-    # )
+    discrete_sac = DiscreteSAC(
+        actor_learning_rate=3e-4,
+        critic_learning_rate=3e-4,
+        temp_learning_rate=3e-4,
+        batch_size=256,
+        n_steps=100000, 
+        use_gpu=False
+    )
     # # # # print(datasets["observation"][0][0].shape)
     # # # # print(len(datasets["observation"][0][0].shape))
     # # # # discrete_sac._create_impl((84,), 1)
-    # discrete_sac.build_with_env(env)
-    # # # # discrete_sac.build_with_dataset(MDPDataset(datasets["observation"], datasets["action"], datasets["reward"], datasets["terminal"]))
-    # discrete_sac.load_model(fname="checkpoints/agent_c{}.pt".format(0))
+    discrete_sac.build_with_env(env)
+    # # # discrete_sac.build_with_dataset(MDPDataset(datasets["observation"], datasets["action"], datasets["reward"], datasets["terminal"]))
+    discrete_sac.load_model(fname="checkpoints/agent_c{}.pt".format(0))
 
     # actions = []
     # start= time.time()
+    
+    actions = list(range(18))
+    all_preds = []
+    
+    for obs in dataset.observations[:5]:
+        preds = []
+        for action in actions:
+            preds.append(discrete_sac.predict_value([obs],[action])[0])
+        all_preds.append(preds)
+    
+    print(all_preds)
+    print(np.array(all_preds).shape)
 
-    
-    # for obs in dataset.observations[:1000]:
-    #     pred = discrete_sac.predict([obs])
-    #     actions.append(pred[0])
-    # print(actions)
-    # print(time.time()-start)
-    # # agent_predictions = [12, 11, 10, 12, 1, 5, 16, 5]
-    # # original_action = [11]
-    # # indices = np.where(np.array(agent_predictions) != original_action[0])[0]
-    # # print(indices)
-    
-    attributions = np.load("data/attributions.npy", allow_pickle=True)
-
-    for attribution in attributions:
-        if attribution["orig_act"] == attribution["new_act"]:
-            print("--"*10)
-            print(attribution)
-            print("--"*10)
-    
-    # from scipy.stats import wasserstein_distance
-    
-    # idx= 0
-    # len_clusters = 8
-    
-    # original_predictions = [[13]]
-    # explanation_predictions = [[17],[11],[12],[13],[13],[5],[16],[5]]
+    # attributions = np.load("data/attributions.npy", allow_pickle=True)
+    # cluster_attributions = np.zeros(8)
+    # for attr in attributions:
+    #     if attr["responsible_cluster"] != 6:
+    #         print(attr["responsible_cluster"])
+    #     cluster_attributions[attr["responsible_cluster"]] += 1
         
-    # original_action = original_predictions[idx][0]
-    # agent_predictions = []
-    # for predictions in explanation_predictions:
-    #     agent_predictions.append(predictions[idx])
-    
-    # cluster_distance = []
-    # alternative_actions = []
-    # for cluster_idx in range(len(explanation_predictions)):
-    #         if agent_predictions[cluster_idx] != original_action:
-    #             # cluster_distance.append(wasserstein_distance(original_data_embedding, compl_dataset_embeddings[cluster_idx]))
-    #             cluster_distance.append(1)
-    #             # alternative_actions.append(cluster_idx)
-    #         else: 
-    #             cluster_distance.append(1e9)
-    # print(cluster_distance)
-    # responsible_cluster_id = np.argsort(cluster_distance)[0]
-    # responsible_action = agent_predictions[responsible_cluster_id]
-    # print('-'*10)
-    # print(f'State - {idx}')
-    # print(f'Distance - {cluster_distance[responsible_cluster_id]}')
-    # print(f'Original Actions -{ACTION_DICT[original_action]}')
-    # print(f'New Action - {ACTION_DICT[responsible_action]}')
-
-    # print(f'Responsible data combination - data id {responsible_cluster_id}')
-
-
+    # cluster_attr_freq = cluster_attributions/np.sum(cluster_attributions)
+    # print(cluster_attr_freq)
+        
     
 if __name__ == "__main__":
     get_agent()
