@@ -73,13 +73,15 @@ if __name__ == "__main__":
     reward_traj = np.load("data/reward_traj.npy", allow_pickle=True)
     action_traj = np.load("data/action_traj.npy", allow_pickle=True)
 
-    traj_id = [23] #[13, 16, 18]
-    obs_id = 998
-    action = "UP"
+    traj_id = [470, 473, 474] #[13, 16, 18]
+    false_ids = [7931]
+    obs_id = 2
+    action = "DOWN"
     
-    # plot_original_state(datasets["observation"][obs_id], obs_id, action)
-    # create_gif(observation_traj, obs_id, traj_id)
-    create_gif(observation_traj, obs_id, traj_id, resp=False)
+    plot_original_state(datasets["observation"][obs_id], obs_id, action)
+    create_gif(observation_traj, obs_id, traj_id)
+    create_gif(observation_traj, obs_id, false_ids, resp=False)
+
     
     # plot_explanation(obs_id, traj_id, action, observation_traj, action_traj)
     # plot_trajectories(998, [13,16,18], action, observation_traj, action_traj)
@@ -89,3 +91,5 @@ if __name__ == "__main__":
     
     # state 998 action UP, explained by trajectories 13, 16, 18 from cluster 0
     # state 997 action UP, explained by trajectories 0. 11. 23 from cluster 3
+    # state 0 action DOWN, explained by trajectories 36, 37, 48 from cluster 3
+    # state 2 action DOWN, explained by trajectories 470, 473, 474 from cluster 3 
