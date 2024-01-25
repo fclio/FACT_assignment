@@ -339,10 +339,10 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
         if terminal: 
             continue
               
-        original_action = original_predictions[idx]
+        original_action = np.argmax(original_predictions[idx])
         agent_predictions = []
         for predictions in explanation_predictions:
-            agent_predictions.append(predictions[idx])
+            agent_predictions.append(np.argmax(predictions[idx]))
         
         cluster_distance = []
         # alternative_actions = []
@@ -382,7 +382,7 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
         print(f'New Action - {ACTION_DICT[responsible_action]}')
 
         print(f'Responsible data combination - data id {responsible_cluster_id}')
-        print(f'Responsible trajectory id {clusters[responsible_cluster_id - 1]}')
+        # print(f'Responsible trajectory id {clusters[responsible_cluster_id - 1]}')
         if len(clusters[responsible_cluster_id - 1]):
             cid_list = list(range(len(clusters)))
             cid_list.pop(responsible_cluster_id - 1)
@@ -468,7 +468,8 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
    
     start = time.time()
     # Generate attributions
-    attributions = generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
+    attributions = generate_attributions(dataset, sv_original_predictions, sv_explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
+    # attributions = generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
     print(f"Attributions generated in {time.time() - start} seconds")
     if save_attributions:
         np.save("data/attributions.npy", attributions)

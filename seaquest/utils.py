@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import seaborn as sns
+from skimage import metrics
 
 from gpt import GPT, GPTConfig
 
@@ -84,3 +85,23 @@ def get_data_embedding(traj_embeddings):
     Basically normalized softmax.
     """
     return np.exp(np.array(traj_embeddings).sum(axis=0)/10.)/np.sum(np.exp(np.array(traj_embeddings).sum(axis=0)/10.))
+
+
+def calculate_similarities(observation_trajs, observation, cluster):
+    traj_similarity = []
+    
+    # For all trajectories in the cluster
+    for traj_id in cluster:
+        similarity = []
+        
+        # check all frames of the trajectory
+        for i in range(30):
+            # Calculate the structural similarity between the observation and the frame
+            similarity.append(metrics.structural_similarity(observation_trajs[traj_id][i][0], observation[0], full=True)[0])
+        traj_similarity.append([np.max(similarity), traj_id, np.argmax(similarity)])
+ 
+    # Sort the array with the highest similarity to observation on top
+    sort_indices = np.argsort(np.array(traj_similarity)[:, 0])
+    traj_similarity = np.array(traj_similarity)[sort_indices][::-1]
+    return traj_similarity
+    
