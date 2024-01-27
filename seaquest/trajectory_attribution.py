@@ -219,7 +219,7 @@ def create_complementary_dataset(dataset, sub_traj_embs, traj_cluster_labels, cl
     return cluster_datasets
 
 
-def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model=False):
+def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model=False, n_fit_steps=10000):
     """
     Compute explanation policies and predictions on first 1000 observations
     for each complementary dataset.
@@ -250,8 +250,8 @@ def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model
             discrete_sac.build_with_env(env)
             discrete_sac.load_model(fname="checkpoints/agent_c{}.pt".format(idx))
         else:
-            discrete_sac.fit(cluster_dataset, n_steps=10000)
-            discrete_sac.save_model("seaquest/data/agent_c{}.pt".format(idx))
+            discrete_sac.fit(cluster_dataset, n_steps=n_fit_steps)
+            discrete_sac.save_model("checkpoints/agent_c{}.pt".format(idx))
             
         agents.append(discrete_sac)
         
@@ -272,7 +272,7 @@ def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model
     return agents, explanation_predictions, sv_explanation_predictions
 
 
-def compute_original_policy(dataset, env=None, load_model=False):
+def compute_original_policy(dataset, env=None, load_model=False, n_fit_steps=10000):
     """
     Compute original policy and predictions on first 1000 observations.
     
@@ -296,8 +296,8 @@ def compute_original_policy(dataset, env=None, load_model=False):
         original_policy.build_with_env(env) 
         original_policy.load_model(fname="checkpoints/agent.pt")
     else:
-        original_policy.fit(dataset, n_steps=10000)
-        original_policy.save_model("seaquest/data/agent.pt")
+        original_policy.fit(dataset, n_steps=n_fit_steps)
+        original_policy.save_model("checkpoints/agent.pt")
         
     # Make predictions
     original_predictions = []
