@@ -402,7 +402,7 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
     return attributions
 
 
-def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters=False, save_attributions=True):
+def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters=False, save_attributions=True, n_fit_steps=10000):
     """
     Runs the full code to generate cluster attributions for the Seaquest environment.
     
@@ -458,12 +458,12 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
    
     start = time.time()
     # Fit explanation policies
-    explanation_policies, explanation_predictions, sv_explanation_predictions = compute_explanation_policies(dataset, cluster_datasets, env=env, load_model=load_model)
+    explanation_policies, explanation_predictions, sv_explanation_predictions = compute_explanation_policies(dataset, cluster_datasets, env=env, load_model=load_model, n_fit_steps=n_fit_steps)
     print(f"Explanation policies fitted in {time.time() - start} seconds")
 
     start = time.time()
     # Fit original policy
-    original_policy, original_predictions, sv_original_predictions = compute_original_policy(dataset, env=env, load_model=load_model)
+    original_policy, original_predictions, sv_original_predictions = compute_original_policy(dataset, env=env, load_model=load_model, n_fit_steps=n_fit_steps)
     print(f"Original policy fitted in {time.time() - start} seconds")
    
     start = time.time()
@@ -488,7 +488,7 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
     
 if __name__ == "__main__":
     
-    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=True, plot_clusters=False, save_attributions=True)
+    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=False, plot_clusters=False, save_attributions=True, n_fit_steps=10000)
     
     # TODO:
     # - Fit discrete SAC agents for more epochs
