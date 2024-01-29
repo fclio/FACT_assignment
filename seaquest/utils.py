@@ -40,7 +40,7 @@ def get_data_embedding(traj_embeddings):
     Create a data embedding by averaging the trajectory embeddings.
     Basically normalized softmax.
     """
-    return np.exp(np.array(traj_embeddings).sum(axis=0)/10.)/np.sum(np.exp(np.array(traj_embeddings).sum(axis=0)/10.))
+    return np.exp(np.array(traj_embeddings).sum(axis=0)/1000.)/np.sum(np.exp(np.array(traj_embeddings).sum(axis=0)/1000.))
 
 
 def calculate_similarities(observation_trajs, observation, cluster, k, metric="ssim"):
@@ -94,10 +94,14 @@ def pick_k_trajectories(attributions, observation_traj, observation, obs_id, k=3
     trajectories_in_cluster = attributions[obs_id]["attributed_trajs"]
     
     # Pick false explanation
-    rng = np.random.default_rng()
-    false_explanation = rng.integers(0, 1000)
-    while false_explanation in trajectories_in_cluster:
+    for i in range(2):
+        rng = np.random.default_rng()
         false_explanation = rng.integers(0, 1000)
+        while false_explanation in trajectories_in_cluster:
+            false_explanation = rng.integers(0, 1000)
+
+        # Create gif of the false explanation trajectory and save to images/False_explanation_{obs_id}_{traj_id}.gif
+        create_gif(observation_traj, obs_id, [false_explanation], resp=False) 
     
     # Calculate similarities
     traj_similarity = calculate_similarities(observation_traj, observation, trajectories_in_cluster, k, metric)
@@ -106,8 +110,6 @@ def pick_k_trajectories(attributions, observation_traj, observation, obs_id, k=3
     plot_original_state(observation, obs_id, attributions[obs_id]["orig_act"])
     # Create gif of the explanation trajectories and save to images/explanation_{obs_id}_{traj_id}.gif
     create_gif(observation_traj, obs_id, traj_similarity[:,1], resp=True)
-    # Create gif of the false explanation trajectory and save to images/False_explanation_{obs_id}_{traj_id}.gif
-    create_gif(observation_traj, obs_id, [false_explanation], resp=False) 
     
     
 if __name__ == "__main__":

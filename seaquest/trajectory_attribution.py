@@ -173,16 +173,22 @@ def compute_dataset_embeddings(cluster_traj_embeddings):
     - original_data_embedding: np.array, shape (128,)
     - compl_dataset_embeddings: list, list of complementary dataset embeddings
     """
-    cluster_embeddings = []
-    for cluster in cluster_traj_embeddings:
-        cluster_embeddings.append(get_data_embedding(cluster))  
+    
+    
+    all_embeddings = []
+    compl_datasets = []
+    for idx1 in range(len(cluster_traj_embeddings)):
+        indexes = list(range(len(cluster_traj_embeddings)))
+        indexes.remove(idx1)
 
-    compl_dataset_embeddings = []
-    for idx, cluster in enumerate(cluster_embeddings):
-        compl_dataset = [item for i, item in enumerate(cluster_embeddings) if i != idx]
-        compl_dataset_embeddings.append(get_data_embedding(compl_dataset))
-
-    original_data_embedding = get_data_embedding(cluster_embeddings)
+        compl_dataset = []
+        for idx2 in indexes:
+            compl_dataset.extend(cluster_traj_embeddings[idx2])
+        compl_datasets.append(compl_dataset)
+        all_embeddings.extend(cluster_traj_embeddings[idx1])
+        
+    compl_dataset_embeddings = [get_data_embedding(compl_dataset) for compl_dataset in compl_datasets]
+    original_data_embedding = get_data_embedding(all_embeddings)
     
     return original_data_embedding, compl_dataset_embeddings
 
@@ -485,7 +491,8 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
     
     if pick_traj:
         observation_traj = np.load("data/observation_traj.npy", allow_pickle=True)
-        pick_k_trajectories(attributions, observation_traj, dataset.observations[50][0], 50, k=3, metric="ssim")
+        for i in range(6):
+            pick_k_trajectories(attributions, observation_traj, dataset.observations[i][0], i, k=4, metric="ssim")
     
     # for cid, cluster in enumerate(clusters):
     #     print("Len of cluster ", len(cluster))
@@ -494,8 +501,8 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
     return attributions, metrics
     
 if __name__ == "__main__":
+    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=True, plot_clusters=False, save_attributions=True, pick_traj=True, n_fit_steps=10000)
     
-    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=False, plot_clusters=False, save_attributions=True, pick_traj=True, n_fit_steps=10000)
     
     # TODO:
     # - Fit discrete SAC agents for more epochs

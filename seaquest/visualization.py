@@ -78,9 +78,9 @@ def create_gif(observation_traj, orig_obs_id, expl_traj_id, resp=True):
         for i in range(30):
             images.append(observation_traj[traj_id][i][0])
         if resp:
-            imageio.mimsave(f'images/explanation_{orig_obs_id}_{traj_id}.gif', images)
+            imageio.mimsave(f'images/explanation_{orig_obs_id}_{traj_id}.gif', images, loop=10000)
         else:
-            imageio.mimsave(f'images/False_explanation_{orig_obs_id}_{traj_id}.gif', images)
+            imageio.mimsave(f'images/False_explanation_{orig_obs_id}_{traj_id}.gif', images, loop=10000)
 
     
 def plot_original_state(observation, obs_id, orig_action):
