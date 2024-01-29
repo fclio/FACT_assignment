@@ -2,26 +2,53 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gzip
 import imageio
-from run import ACTION_DICT
+import pandas as pd
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+import seaborn as sns
+from constants import ACTION_DICT
 
 
-def plot_explanation(orig_obs_id, expl_traj_id, orig_action, observation_traj, action_traj):
+def plot_clusters(sub_traj_embs, traj_cluster_labels, clusters, emb_ids):
     """
-    Plot original observation large on the left and 2 frames from explanation trajectories on the right
+    Brings down dimensions of the embeddings to 2D and plots the clusters.
+    
+    Args: 
+    - sub_traj_embs: np.array, shape (num_sub_trajs, 128)
+    - traj_cluster_labels: np.array, shape (num_sub_trajs,)
+    - clusters: list, list of clusters
+    - emb_ids: list, list of indices of embeddings to plot
     """
-    fig = plt.figure(constrained_layout=True)
-    axs = fig.subplot_mosaic([['Left', 'TopRight'],['Left', 'BottomRight']],
-                            gridspec_kw={'width_ratios':[2, 1]})
-    axs['Left'].imshow(datasets["observation"][orig_obs_id], cmap="gray")
-    axs['Left'].set_title(f"Original Action: {orig_action}")
+    palette = sns.color_palette('husl', len(clusters) + 1)
+    pca_traj = PCA(n_components=2)
+    pca_traj_embeds = pca_traj.fit_transform(sub_traj_embs)
 
-    axs['TopRight'].imshow(observation_traj[expl_traj_id][0][0], cmap="gray")
-    axs['TopRight'].set_title(f"New action: {ACTION_DICT[action_traj[expl_traj_id][0][0]]}")
+    plotting_data = {'feature 1': pca_traj_embeds[emb_ids, 0],
+                    'feature 2': pca_traj_embeds[emb_ids, 1],
+                    'cluster id': traj_cluster_labels[emb_ids]}
+    df = pd.DataFrame(plotting_data)
 
-    axs['BottomRight'].imshow(observation_traj[expl_traj_id][1][0], cmap="gray")
-    axs['BottomRight'].set_title(f"New action: {ACTION_DICT[action_traj[expl_traj_id][1][0]]}")
-    fig.suptitle(f"Explanation (right) of action original action (left)")
-    plt.savefig(f"images/explanation_{orig_obs_id}_{expl_traj_id}.png")
+    plt.figure(figsize=(5,4))
+    data_ax = sns.scatterplot(x='feature 1',
+                            y='feature 2',
+                            hue='cluster id',
+                            palette=palette[:len(clusters)],
+                            data=df,
+                            legend=True)
+    plt.legend(title = '$c_{j}$', loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=5)
+    # plt.legend(title = '$c_{j}$', loc='center left', bbox_to_anchor=(1., 0.7), ncol=2)
+    # for cid, _ in enumerate(cluster_data_embeds):
+    #     data_ax.text(pca_traj_embeds[:, 0][cid],
+    #                  pca_traj_embeds[:, 1][cid],
+    #                  str(cid),
+    #                  horizontalalignment='left',
+    #                  size='medium',
+    #                  color='black',
+    #                  weight='semibold')
+    plt.tight_layout()
+    plt.title("Trajectory Clustering Seaquest")
+    plt.savefig('images/traj_clustering_grid.pdf')
+    plt.show()
     
 
 def plot_trajectories(orig_obs_id, expl_traj_id, orig_action, observation_traj, action_traj):
@@ -43,9 +70,10 @@ def plot_trajectories(orig_obs_id, expl_traj_id, orig_action, observation_traj, 
 
 def create_gif(observation_traj, orig_obs_id, expl_traj_id, resp=True):
     """
-    Create a gif of the explanation trajectory consisting of 30 frames
+    Create a gif of the explanation trajectories in expl_traj_id consisting of 30 frames
     """
     for traj_id in expl_traj_id:
+        traj_id = int(traj_id)
         images = []
         for i in range(30):
             images.append(observation_traj[traj_id][i][0])
@@ -62,25 +90,26 @@ def plot_original_state(observation, obs_id, orig_action):
     plt.axis("off")
     plt.savefig(f"images/original_state_{obs_id}.png")
     
-if __name__ == "__main__":
-    datasets_names = ["observation"]
-    datasets = {}
-    for dataset_name in datasets_names:
-        with gzip.open("data/"+dataset_name+".gz", 'rb') as f:
-            datasets[dataset_name] = np.load(f, allow_pickle=False)
-            
-    observation_traj = np.load("data/observation_traj.npy", allow_pickle=True)
-    reward_traj = np.load("data/reward_traj.npy", allow_pickle=True)
-    action_traj = np.load("data/action_traj.npy", allow_pickle=True)
-
-    traj_id = [470, 473, 474] #[13, 16, 18]
-    false_ids = [7931]
-    obs_id = 2
-    action = "DOWN"
     
-    plot_original_state(datasets["observation"][obs_id], obs_id, action)
-    create_gif(observation_traj, obs_id, traj_id)
-    create_gif(observation_traj, obs_id, false_ids, resp=False)
+# if __name__ == "__main__":
+#     datasets_names = ["observation"]
+#     datasets = {}
+#     for dataset_name in datasets_names:
+#         with gzip.open("data/"+dataset_name+".gz", 'rb') as f:
+#             datasets[dataset_name] = np.load(f, allow_pickle=False)
+            
+#     observation_traj = np.load("data/observation_traj.npy", allow_pickle=True)
+#     reward_traj = np.load("data/reward_traj.npy", allow_pickle=True)
+#     action_traj = np.load("data/action_traj.npy", allow_pickle=True)
+
+#     traj_id = [470, 473, 474] #[13, 16, 18]
+#     false_ids = [7931]
+#     obs_id = 2
+#     action = "DOWN"
+    
+#     plot_original_state(datasets["observation"][obs_id], obs_id, action)
+#     create_gif(observation_traj, obs_id, traj_id)
+#     create_gif(observation_traj, obs_id, false_ids, resp=False)
 
     
     # plot_explanation(obs_id, traj_id, action, observation_traj, action_traj)

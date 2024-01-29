@@ -19,7 +19,8 @@ from d3rlpy.algos import DiscreteSAC
 from scipy.stats import wasserstein_distance
 
 from metrics import get_metrics
-from utils import get_data_embedding, get_decision_transformer, plot_clusters
+from utils import get_data_embedding, get_decision_transformer, pick_k_trajectories
+from visualization import plot_clusters
 from constants import ACTION_DICT
 
 
@@ -339,10 +340,10 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
         if terminal: 
             continue
               
-        original_action = original_predictions[idx]
+        original_action = np.argmax(original_predictions[idx])
         agent_predictions = []
         for predictions in explanation_predictions:
-            agent_predictions.append(predictions[idx])
+            agent_predictions.append(np.argmax(predictions[idx]))
         
         cluster_distance = []
         # alternative_actions = []
@@ -382,7 +383,7 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
         print(f'New Action - {ACTION_DICT[responsible_action]}')
 
         print(f'Responsible data combination - data id {responsible_cluster_id}')
-        print(f'Responsible trajectory id {clusters[responsible_cluster_id - 1]}')
+        # print(f'Responsible trajectory id {clusters[responsible_cluster_id - 1]}')
         if len(clusters[responsible_cluster_id - 1]):
             cid_list = list(range(len(clusters)))
             cid_list.pop(responsible_cluster_id - 1)
@@ -402,7 +403,7 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
     return attributions
 
 
-def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters=False, save_attributions=True, n_fit_steps=10000):
+def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters=False, save_attributions=True, pick_traj=False, n_fit_steps=10000):
     """
     Runs the full code to generate cluster attributions for the Seaquest environment.
     
@@ -468,7 +469,8 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
    
     start = time.time()
     # Generate attributions
-    attributions = generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
+    attributions = generate_attributions(dataset, sv_original_predictions, sv_explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
+    # attributions = generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
     print(f"Attributions generated in {time.time() - start} seconds")
     if save_attributions:
         np.save("data/attributions.npy", attributions)
@@ -481,16 +483,20 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
        
     metrics = get_metrics(sv_explanation_predictions, sv_original_predictions, attributions, original_data_embedding, compl_dataset_embeddings)
     
-    for cid, cluster in enumerate(clusters):
-        print("Len of cluster ", len(cluster))
+    if pick_traj:
+        observation_traj = np.load("data/observation_traj.npy", allow_pickle=True)
+        pick_k_trajectories(attributions, observation_traj, dataset.observations[50][0], 50, k=3, metric="ssim")
+    
+    # for cid, cluster in enumerate(clusters):
+    #     print("Len of cluster ", len(cluster))
+    
     
     return attributions, metrics
     
 if __name__ == "__main__":
     
-    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=False, plot_clusters=False, save_attributions=True, n_fit_steps=10000)
+    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=False, plot_clusters=False, save_attributions=True, pick_traj=True, n_fit_steps=10000)
     
     # TODO:
     # - Fit discrete SAC agents for more epochs
     # - add reward scaler?
-    # - More visualizations
