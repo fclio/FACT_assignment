@@ -226,7 +226,7 @@ def create_complementary_dataset(dataset, sub_traj_embs, traj_cluster_labels, cl
     return cluster_datasets
 
 
-def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model=False, n_fit_steps=10000):
+def compute_explanation_policies(dataset, cluster_datasets, prediction_idx, env=None, load_model=False, n_fit_steps=10000,):
     """
     Compute explanation policies and predictions on first 1000 observations
     for each complementary dataset.
@@ -266,7 +266,7 @@ def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model
         predictions = []
         sv_predictions = []
         actions = list(range(18))
-        for observation in dataset.observations[:1000]:
+        for observation in dataset.observations[prediction_idx]:
             state_action_values = []
             for action in actions:
                 state_action_values.append(discrete_sac.predict_value([observation], [action])[0])
@@ -279,7 +279,7 @@ def compute_explanation_policies(dataset, cluster_datasets, env=None, load_model
     return agents, explanation_predictions, sv_explanation_predictions
 
 
-def compute_original_policy(dataset, env=None, load_model=False, n_fit_steps=10000):
+def compute_original_policy(dataset, prediction_idx, env=None, load_model=False, n_fit_steps=10000):
     """
     Compute original policy and predictions on first 1000 observations.
     
@@ -310,7 +310,7 @@ def compute_original_policy(dataset, env=None, load_model=False, n_fit_steps=100
     original_predictions = []
     sv_original_predictions = []
     actions = list(range(18))
-    for observation in dataset.observations[:1000]:
+    for observation in dataset.observations[prediction_idx]:
         state_action_values = []
         for action in actions:
         # original_predictions.append([original_policy.predict([observation])][0])
@@ -321,7 +321,7 @@ def compute_original_policy(dataset, env=None, load_model=False, n_fit_steps=100
     return original_policy, original_predictions, sv_original_predictions
 
 
-def generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters):
+def generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters, prediction_idx):
     """
     Cluster attribution algorithm from the paper. Attributes responsible cluster for first
     100 observations.
@@ -338,18 +338,24 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
     - attributions: list, list of attributions
     """
     attributions = []
+    # 1000 random observationsin list 
+    # for obs in list 
+        # for pol in policies:
+#           for act in actions:
+            #   p <- pol.predict_value([obs], [act])
     
-    for idx, (observation, action, reward, terminal)  in enumerate(zip(dataset.observations, dataset.actions, dataset.rewards, dataset.terminals)):
+    count = 0
+    for idx, terminal  in enumerate(dataset.terminals):
         # To keep it short, can extend 
-        if idx >= 1000:  
-            break
+        if idx not in prediction_idx:  
+            continue
         if terminal: 
             continue
               
-        original_action = np.argmax(original_predictions[idx])
+        original_action = np.argmax(original_predictions[count])
         agent_predictions = []
         for predictions in explanation_predictions:
-            agent_predictions.append(np.argmax(predictions[idx]))
+            agent_predictions.append(np.argmax(predictions[count]))
         
         cluster_distance = []
         # alternative_actions = []
@@ -365,30 +371,30 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
         responsible_cluster_id = np.argsort(cluster_distance)[0]
         responsible_action = agent_predictions[responsible_cluster_id]
         
-        print('-'*50)	
-        print(f'Observation - {idx}')
-        print(f'Original Action - {original_action}')
-        print(f'Explanation Actions - {[action for action in agent_predictions]}')
-        print(f'Responsible Cluster - {responsible_cluster_id}')
-        print(f"Cluster distances - {cluster_distance}")
-        print(f"argsort {np.argsort(cluster_distance)}")
+        # print('-'*50)	
+        # print(f'Observation - {idx}')
+        # print(f'Original Action - {original_action}')
+        # print(f'Explanation Actions - {[action for action in agent_predictions]}')
+        # print(f'Responsible Cluster - {responsible_cluster_id}')
+        # print(f"Cluster distances - {cluster_distance}")
+        # print(f"argsort {np.argsort(cluster_distance)}")
         
-        if responsible_action == original_action:
-            print('-'*10)
-            print("SAME ACTION")
-            print("Original action", original_predictions[idx])
-            for i, pred in enumerate(explanation_predictions):
-                print(f"Explanation actions {i}", pred[idx])
-            print("Responsible action", responsible_action)
-            print('-'*10)
+        # if responsible_action == original_action:
+        #     print('-'*10)
+        #     print("SAME ACTION")
+        #     print("Original action", original_predictions[count])
+        #     for i, pred in enumerate(explanation_predictions):
+        #         print(f"Explanation actions {i}", pred[count])
+        #     print("Responsible action", responsible_action)
+        #     print('-'*10)
         
-        print('-'*10)
-        print(f'State - {idx}')
-        print(f'Distance - {cluster_distance[responsible_cluster_id]}')
-        print(f'Original Actions -{ACTION_DICT[original_action]}')
-        print(f'New Action - {ACTION_DICT[responsible_action]}')
+        # print('-'*10)
+        # print(f'State - {idx}')
+        # print(f'Distance - {cluster_distance[responsible_cluster_id]}')
+        # print(f'Original Actions -{ACTION_DICT[original_action]}')
+        # print(f'New Action - {ACTION_DICT[responsible_action]}')
 
-        print(f'Responsible data combination - data id {responsible_cluster_id}')
+        # print(f'Responsible data combination - data id {responsible_cluster_id}')
         # print(f'Responsible trajectory id {clusters[responsible_cluster_id - 1]}')
         if len(clusters[responsible_cluster_id - 1]):
             cid_list = list(range(len(clusters)))
@@ -405,11 +411,12 @@ def generate_attributions(dataset, original_predictions, explanation_predictions
             })
     #         for traj in clusters[responsible_data_combination - 1]:
     #             env.plot_traj(offline_data[traj])
-        print('-'*10)
+        # print('-'*10)
+        count += 1
     return attributions
 
 
-def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters=False, save_attributions=True, pick_traj=False, n_fit_steps=10000):
+def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters=False, save_attributions=True, pick_traj=False, n_fit_steps=10000, n_runs=1):
     """
     Runs the full code to generate cluster attributions for the Seaquest environment.
     
@@ -453,56 +460,79 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
     clusters, cluster_traj_embeddings, traj_cluster_labels = cluster_trajectories(sub_traj_embs, plot=plot_clusters, num_clusters=8)
     print(f"Trajectories clustered in {time.time() - start} seconds")
 
-    start = time.time()
-    # Compute original dataset embedding and complementary dataset embeddings
-    original_data_embedding, compl_dataset_embeddings = compute_dataset_embeddings(cluster_traj_embeddings)
-    print(f"Dataset embeddings computed in {time.time() - start} seconds")
-    
-    start = time.time()
-    # Create complementary datasets
-    cluster_datasets = create_complementary_dataset(dataset, sub_traj_embs, traj_cluster_labels, clusters)
-    print(f"Complementary datasets created in {time.time() - start} seconds")
-   
-    start = time.time()
-    # Fit explanation policies
-    explanation_policies, explanation_predictions, sv_explanation_predictions = compute_explanation_policies(dataset, cluster_datasets, env=env, load_model=load_model, n_fit_steps=n_fit_steps)
-    print(f"Explanation policies fitted in {time.time() - start} seconds")
+    metrics = []
+    prediction_idexes = []
+    for i in range(n_runs):
 
-    start = time.time()
-    # Fit original policy
-    original_policy, original_predictions, sv_original_predictions = compute_original_policy(dataset, env=env, load_model=load_model, n_fit_steps=n_fit_steps)
-    print(f"Original policy fitted in {time.time() - start} seconds")
-   
-    start = time.time()
-    # Generate attributions
-    attributions = generate_attributions(dataset, sv_original_predictions, sv_explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
-    # attributions = generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
-    print(f"Attributions generated in {time.time() - start} seconds")
-    if save_attributions:
-        np.save("data/attributions.npy", attributions)
+        start = time.time()
+        # Compute original dataset embedding and complementary dataset embeddings
+        original_data_embedding, compl_dataset_embeddings = compute_dataset_embeddings(cluster_traj_embeddings)
+        print(f"Dataset embeddings computed in {time.time() - start} seconds")
         
-    np.save("data/sv_explanation_predictions.npy", sv_explanation_predictions)
-    np.save("data/sv_original_predictions.npy", sv_original_predictions)
-    # sv_explanation_predictions = np.load("data/sv_explanation_predictions.npy")
-    # sv_original_predictions = np.load("data/sv_original_predictions.npy")
-    # attributions = np.load("data/attributions.npy", allow_pickle=True)
-       
-    metrics = get_metrics(sv_explanation_predictions, sv_original_predictions, attributions, original_data_embedding, compl_dataset_embeddings)
+        start = time.time()
+        # Create complementary datasets
+        cluster_datasets = create_complementary_dataset(dataset, sub_traj_embs, traj_cluster_labels, clusters)
+        print(f"Complementary datasets created in {time.time() - start} seconds")
     
-    if pick_traj:
-        observation_traj = np.load("data/observation_traj.npy", allow_pickle=True)
-        for i in range(6):
-            pick_k_trajectories(attributions, observation_traj, dataset.observations[i][0], i, k=4, metric="ssim")
+        original_state = np.random.get_state()
+        np.random.seed(0)
+        prediction_idx = np.random.choice(len(dataset.observations), 1000, replace=False)
+        prediction_idexes.append(prediction_idx)
+        np.random.set_state(original_state)
+
+        start = time.time()
+        # Fit explanation policies
+        explanation_policies, explanation_predictions, sv_explanation_predictions = compute_explanation_policies(dataset, cluster_datasets, prediction_idx, env=env, load_model=load_model, n_fit_steps=n_fit_steps)
+        print(f"Explanation policies fitted in {time.time() - start} seconds")
+
+        start = time.time()
+        # Fit original policy
+        original_policy, original_predictions, sv_original_predictions = compute_original_policy(dataset, prediction_idx, env=env, load_model=load_model, n_fit_steps=n_fit_steps)
+        print(f"Original policy fitted in {time.time() - start} seconds")
     
-    # for cid, cluster in enumerate(clusters):
-    #     print("Len of cluster ", len(cluster))
+        start = time.time()
+        # Generate attributions
+        attributions = generate_attributions(dataset, sv_original_predictions, sv_explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters, prediction_idx)
+        # attributions = generate_attributions(dataset, original_predictions, explanation_predictions, original_data_embedding, compl_dataset_embeddings, clusters)
+        print(f"Attributions generated in {time.time() - start} seconds")
+        if save_attributions:
+            np.save("data/attributions.npy", attributions)
+            
+        np.save("data/sv_explanation_predictions.npy", sv_explanation_predictions)
+        np.save("data/sv_original_predictions.npy", sv_original_predictions)
+        # sv_explanation_predictions = np.load("data/sv_explanation_predictions.npy")
+        # sv_original_predictions = np.load("data/sv_original_predictions.npy")
+        # attributions = np.load("data/attributions.npy", allow_pickle=True)
+        
+        metrics.append(get_metrics(sv_explanation_predictions, sv_original_predictions, attributions, original_data_embedding, compl_dataset_embeddings))
+        
+        if pick_traj:
+            observation_traj = np.load("data/observation_traj.npy", allow_pickle=True)
+            for i in range(6):
+                pick_k_trajectories(attributions, observation_traj, dataset.observations[i][0], i, k=4, metric="ssim")
+        
+        # for cid, cluster in enumerate(clusters):
+        #     print("Len of cluster ", len(cluster))
+        
+        
     
-    
+    for cluster_idx in range(len(clusters)):
+        for metric in metrics[0].keys():
+            if metric == "init_state_values":
+                print(metric, "cluster: ", cluster_idx, "mean: ", np.mean([m[metric][cluster_idx+1] for m in metrics]))
+                # std
+                print(metric,  "cluster: ", cluster_idx, "std: ", np.std([m[metric][cluster_idx+1] for m in metrics]))
+            else:
+                print(metric, "cluster: ", cluster_idx, "mean: ", np.mean([m[metric][cluster_idx] for m in metrics]))
+                # std
+                print(metric,  "cluster: ", cluster_idx, "std: ", np.std([m[metric][cluster_idx] for m in metrics]))
+        # print("Prediction indexes: ", prediction_idexes)
+    print("original inistial state values mean: ", np.mean([m["init_state_values"][0] for m in metrics]))
+    print("original inistial state values std: ", np.std([m["init_state_values"][0] for m in metrics]))
     return attributions, metrics
     
 if __name__ == "__main__":
-    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=True, plot_clusters=False, save_attributions=True, pick_traj=True, n_fit_steps=10000)
-    
+    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=True, plot_clusters=False, save_attributions=True, pick_traj=False, n_fit_steps=10000, n_runs=5)
     
     # TODO:
     # - Fit discrete SAC agents for more epochs

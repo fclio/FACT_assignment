@@ -66,7 +66,7 @@ def get_data_distance(original_data_embedding, compl_dataset_embeddings):
     distances = np.zeros((len(compl_dataset_embeddings)))
     for cid, compl_embedding in enumerate(compl_dataset_embeddings):
         distances[cid] = wasserstein_distance(original_data_embedding, compl_embedding)
-    print("distances ", distances)
+    # print("distances ", distances)
     with np.printoptions(precision=5, suppress=True):
         normalized_distances = (distances - distances.min()) / (distances.max() - distances.min())
         print(f"Normalized data distances: {normalized_distances}")
