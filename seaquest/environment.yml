@@ -1,0 +1,11 @@
+name: seaquest
+dependencies:
+- python=3.8
+- pip
+- pip:
+  - numpy==1.23.1
+  - git+https://github.com/takuseno/d4rl-atari
+  - "gym[atari, accept-rom-license]"
+  - pyclustering
+  - seaborn
+  - d3rlpy==1.1.1

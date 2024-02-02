@@ -23,32 +23,48 @@ def plot_clusters(sub_traj_embs, traj_cluster_labels, clusters, emb_ids):
     pca_traj = PCA(n_components=2)
     pca_traj_embeds = pca_traj.fit_transform(sub_traj_embs)
 
-    plotting_data = {'feature 1': pca_traj_embeds[emb_ids, 0],
-                    'feature 2': pca_traj_embeds[emb_ids, 1],
-                    'cluster id': traj_cluster_labels[emb_ids]}
-    df = pd.DataFrame(plotting_data)
-
-    plt.figure(figsize=(5,4))
-    data_ax = sns.scatterplot(x='feature 1',
-                            y='feature 2',
-                            hue='cluster id',
-                            palette=palette[:len(clusters)],
-                            data=df,
-                            legend=True)
-    plt.legend(title = '$c_{j}$', loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=5)
-    # plt.legend(title = '$c_{j}$', loc='center left', bbox_to_anchor=(1., 0.7), ncol=2)
-    # for cid, _ in enumerate(cluster_data_embeds):
-    #     data_ax.text(pca_traj_embeds[:, 0][cid],
-    #                  pca_traj_embeds[:, 1][cid],
-    #                  str(cid),
-    #                  horizontalalignment='left',
-    #                  size='medium',
-    #                  color='black',
-    #                  weight='semibold')
+    # plotting_data = {'feature 1': pca_traj_embeds[emb_ids, 0],
+    #                 'feature 2': pca_traj_embeds[emb_ids, 1],
+    #                 'cluster id': traj_cluster_labels[emb_ids]}
+    # df = pd.DataFrame(plotting_data)
+    
+    # 
+    # data_ax = sns.scatterplot(x='feature 1',
+    #                         y='feature 2',
+    #                         hue='cluster id',
+    #                         palette=palette[:len(clusters)],
+    #                         data=df,
+    #                         legend=True)
+    # plt.legend(title = '$c_{j}$', loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=5)
+    # # plt.legend(title = '$c_{j}$', loc='center left', bbox_to_anchor=(1., 0.7), ncol=2)
+    # # for cid, _ in enumerate(cluster_data_embeds):
+    # #     data_ax.text(pca_traj_embeds[:, 0][cid],
+    # #                  pca_traj_embeds[:, 1][cid],
+    # #                  str(cid),
+    # #                  horizontalalignment='left',
+    # #                  size='medium',
+    # #                  color='black',
+    # #                  weight='semibold')
+    # plt.tight_layout()
+    # plt.title("Trajectory Clustering Seaquest")
+    # plt.savefig('images/traj_clustering_grid.pdf')
+    # plt.show()
+    
+    fig, ax = plt.subplots(figsize=(5, 4))
+    ax.set_xlabel("feature 1")
+    ax.set_ylabel("feature 2")
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    for j in range(len(clusters)):
+        # id = np.where(traj_cluster_labels == j)[0]
+        ax.scatter(pca_traj_embeds[traj_cluster_labels == j,0][:80], pca_traj_embeds[traj_cluster_labels == j,1][:80], label=j)
+    ax.legend(title="$c_j$", bbox_to_anchor=(0.5, 1.2), loc="lower center", ncol=5)
     plt.tight_layout()
     plt.title("Trajectory Clustering Seaquest")
     plt.savefig('images/traj_clustering_grid.pdf')
     plt.show()
+
+
     
 
 def plot_trajectories(orig_obs_id, expl_traj_id, orig_action, observation_traj, action_traj):
