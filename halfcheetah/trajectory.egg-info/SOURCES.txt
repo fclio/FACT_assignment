@@ -31,3 +31,4 @@ trajectory/utils/setup.py
 trajectory/utils/timer.py
 trajectory/utils/training.py
 trajectory/utils/video.py
+trajectory_aaa/__init__.py
