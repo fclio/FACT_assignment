@@ -24,3 +24,13 @@ pip install pyclustering
 pip install seaborn 
 pip install d3rlpy==1.1.1
 ~~~
+Alternatively, build from the environment.yml:
+~~~shell
+cd seaquest
+conda env create -f environment.yml
+conda activate seaquest
+~~~~
+Then run the main file to get the results.
+~~~shell
+python3 trajectory_attribution.py
+~~~
