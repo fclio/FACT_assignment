@@ -1,0 +1,1250 @@
+diff --git a/.gitignore b/.gitignore
+index 30d226d..a18312a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,6 +1,5 @@
+ __pycache__/
+ *.mp4
+-halfcheetah/logs/
+ .ipynb_checkpoints/
+ __pycache__/
+ Open Notebook.onetoc2 
+diff --git a/gridworld/gridworld_expts.ipynb b/gridworld/gridworld_expts.ipynb
+index e2a261b..bd0b720 100644
+--- a/gridworld/gridworld_expts.ipynb
++++ b/gridworld/gridworld_expts.ipynb
+@@ -1570,7 +1570,7 @@
+    "name": "python",
+    "nbconvert_exporter": "python",
+    "pygments_lexer": "ipython3",
+-   "version": "3.8.10"
++   "version": "3.10.12"
+   }
+  },
+  "nbformat": 4,
+diff --git a/halfcheetah/clusters.npy b/halfcheetah/clusters.npy
+deleted file mode 100644
+index 3c198aa..0000000
+Binary files a/halfcheetah/clusters.npy and /dev/null differ
+diff --git a/halfcheetah/embeddings.npy b/halfcheetah/embeddings.npy
+deleted file mode 100644
+index 912d68c..0000000
+Binary files a/halfcheetah/embeddings.npy and /dev/null differ
+diff --git a/halfcheetah/halfcheetah.py b/halfcheetah/halfcheetah.py
+deleted file mode 100644
+index 626c42d..0000000
+--- a/halfcheetah/halfcheetah.py
++++ /dev/null
+@@ -1,112 +0,0 @@
+-import gym
+-import d4rl # Import required to register environments, you may need to also import the submodule
+-import numpy as np
+-import d3rlpy
+-
+-def main():
+-    dataset_d3, env = d3rlpy.datasets.get_dataset("halfcheetah-medium-v2")
+-
+-    print(dataset_d3.observations.shape)
+-    print(dataset_d3.actions.shape)
+-    print(dataset_d3.rewards.shape)
+-        # print(dataset_d3.next_observations.shape)
+-    print(dataset_d3.terminals.shape)
+-    print(dataset_d3.terminals.sum()) # no
+-
+-    env = gym.make('halfcheetah-medium-v2')
+-    dataset_d4 = d4rl.qlearning_dataset(env)
+-
+-    print(dataset_d4['observations'].shape)
+-    print(dataset_d4['rewards'].shape)
+-    print(dataset_d4['terminals'].shape)
+-    print(dataset_d4['actions'].shape)
+-
+-    print(dataset_d4['rewards'][1])
+-    print(dataset_d3.rewards[1])
+-
+-
+-    print(np.allclose(dataset_d3.actions[100], dataset_d4['actions'][100]))
+-
+-    for j in range(1000):
+-        for i in range(999):
+-            if dataset_d4['rewards'][j * 999 + i] != dataset_d3.rewards[j * 1000 + i]: print("yo", i)
+-        # if not np.allclose(dataset_d3.observations[i], dataset_d4['observations'][i]): print('obs ongelijk')
+-        # if not np.allclose(dataset_d3.rewards[i], dataset_d4['rewards'][i]): print('obs ongelijk')
+-        # if not np.allclose(dataset_d3.actions[i], dataset_d4['actions'][i]): print('obs ongelijk')
+-
+-    sac = d3rlpy.algos.SAC(
+-        actor_learning_rate=3e-4,
+-        critic_learning_rate=3e-4,
+-        temp_learning_rate=3e-4,
+-        batch_size=256)
+-
+-    print(sac)
+-    sac.fit(dataset_d3, n_steps=10000)
+-
+-    actions = sac.predict(dataset_d3.observations[0])
+-
+-    print(actions)
+-
+-
+-    return
+-    print('yo!')
+-
+-    # Create the environment
+-    env = gym.make('halfcheetah-medium-v2')
+-
+-    # d4rl abides by the OpenAI gym interface
+-    env.reset()
+-    env.step(env.action_space.sample())
+-
+-    # Each task is associated with a dataset
+-    # dataset contains observations, actions, rewards, terminals, and infos
+-    # dataset = env.get_dataset()
+-    dataset = d4rl.qlearning_dataset(env)
+-
+-    print(dataset.keys()) # An N x dim_observation Numpy array of observations
+-    print(dataset['rewards'].shape) # An N x dim_observation Numpy array of observations
+-
+-
+-    first_traj = []
+-    for i in range(50000):
+-        if not np.allclose(dataset['next_observations'][i],dataset['observations'][i+1]): print("yo", i, dataset['terminals'][i])
+-        # if dataset['terminals'][i] == True:
+-        #     print('traj ended at', i)
+-        #     break
+-
+-        # first_traj.append((dataset['observations'][i],
+-        #                    dataset['actions'][i],
+-        #                    dataset['rewards'][i],
+-        #                    dataset['next_observations'][i]))
+-    # print(first_traj)
+-
+-
+-    # print(dataset['rewards'].shape) # An N x dim_observation Numpy array of observations
+-
+-    # Alternatively, use d4rl.qlearning_dataset which
+-    # also adds next_observations.
+-
+-    # import d3rlpy
+-
+-    # # dataset, env = d3rlpy.datasets.get_dataset("halfcheetah-medium")
+-
+-    # # prepare algorithm
+-    # # sac = d3rlpy.algos.SAC().create(device="cpu")
+-
+-    # sac = d3rlpy.algos.SACConfig(
+-    #     actor_learning_rate=3e-4,
+-    #     critic_learning_rate=3e-4,
+-    #     temp_learning_rate=3e-4,
+-    #     batch_size=256,
+-    # ).create(device='cpu')
+-
+-
+-    # # train offline
+-    # # sac.fit(dataset, n_steps=1000)
+-
+-
+-    # # ready to control
+-    # actions = sac.predict(0)
+-
+-if __name__ == "__main__":
+-    main()
+\ No newline at end of file
+diff --git a/halfcheetah/pca.py.npy b/halfcheetah/pca.py.npy
+deleted file mode 100644
+index bb19150..0000000
+Binary files a/halfcheetah/pca.py.npy and /dev/null differ
+diff --git a/halfcheetah/plotting/bar.png b/halfcheetah/plotting/bar.png
+deleted file mode 100644
+index 3679667..0000000
+Binary files a/halfcheetah/plotting/bar.png and /dev/null differ
+diff --git a/halfcheetah/plotting/plot.py b/halfcheetah/plotting/plot.py
+deleted file mode 100644
+index 163d0e4..0000000
+--- a/halfcheetah/plotting/plot.py
++++ /dev/null
+@@ -1,74 +0,0 @@
+-import numpy as np
+-import matplotlib
+-import matplotlib.pyplot as plt
+-import pdb
+-
+-from plotting.scores import means
+-
+-class Colors:
+-	grey = '#B4B4B4'
+-	gold = '#F6C781'
+-	red = '#EC7C7D'
+-	blue = '#70ABCC'
+-
+-LABELS = {
+-	# 'BC': 'Behavior\nCloning',
+-	# 'MBOP': 'Model-Based\nOffline Planning',
+-	# 'BRAC': 'Behavior-Reg.\nActor-Critic',
+-	# 'CQL': 'Conservative\nQ-Learning',
+-}
+-
+-def get_mean(results, exclude=None):
+-	'''
+-		results : { environment: score, ... }
+-	'''
+-	filtered = {
+-		k: v for k, v in results.items()
+-		if (not exclude) or (exclude and exclude not in k)
+-	}
+-	return np.mean(list(filtered.values()))
+-
+-if __name__ == '__main__':
+-
+-	#################
+-	## latex
+-	#################
+-	matplotlib.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+-	matplotlib.rc('text', usetex=True)
+-	matplotlib.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
+-	#################
+-
+-	fig = plt.gcf()
+-	ax = plt.gca()
+-	fig.set_size_inches(7.5, 2.5)
+-
+-	means = {k: get_mean(v, exclude='ant') for k, v in means.items()}
+-	print(means)
+-
+-	algs = ['BC', 'MBOP', 'BRAC', 'CQL', 'Decision\nTransformer', 'Trajectory\nTransformer']
+-	vals = [means[alg] for alg in algs]
+-
+-	colors = [
+-		Colors.grey, Colors.gold,
+-		Colors.red, Colors.red, Colors.blue, Colors.blue
+-	]
+-
+-	labels = [LABELS.get(alg, alg) for alg in algs]
+-	plt.bar(labels, vals, color=colors, edgecolor=Colors.gold, lw=0)
+-	plt.ylabel('Average normalized return', labelpad=15)
+-	# plt.title('Offline RL Results')
+-
+-	legend_labels = ['Behavior Cloning', 'Trajectory Optimization', 'Temporal Difference', 'Sequence Modeling']
+-	colors = [Colors.grey, Colors.gold, Colors.red, Colors.blue]
+-	handles = [plt.Rectangle((0,0),1,1, color=color) for label, color in zip(legend_labels, colors)]
+-	plt.legend(handles, legend_labels, ncol=4,
+-		bbox_to_anchor=(1.07, -.18), fancybox=False, framealpha=0, shadow=False, columnspacing=1.5, handlelength=1.5)
+-
+-	matplotlib.rcParams['hatch.linewidth'] = 7.5
+-	# ax.patches[-1].set_hatch('/')
+-
+-	ax.spines['right'].set_visible(False)
+-	ax.spines['top'].set_visible(False)
+-
+-	# plt.savefig('plotting/bar.pdf', bbox_inches='tight')
+-	plt.savefig('plotting/bar.png', bbox_inches='tight', dpi=500)
+diff --git a/halfcheetah/plotting/read_results.py b/halfcheetah/plotting/read_results.py
+deleted file mode 100644
+index 5a5fb62..0000000
+--- a/halfcheetah/plotting/read_results.py
++++ /dev/null
+@@ -1,70 +0,0 @@
+-import os
+-import glob
+-import numpy as np
+-import json
+-import pdb
+-
+-import trajectory.utils as utils
+-
+-DATASETS = [
+-	f'{env}-{buffer}'
+-	for env in ['hopper', 'walker2d', 'halfcheetah', 'ant']
+-	for buffer in ['medium-expert-v2', 'medium-v2', 'medium-replay-v2']
+-]
+-
+-LOGBASE = 'logs'
+-TRIAL = '*'
+-EXP_NAME = 'plans/pretrained'
+-
+-def load_results(paths):
+-	'''
+-		paths : path to directory containing experiment trials
+-	'''
+-	scores = []
+-	for i, path in enumerate(sorted(paths)):
+-		score = load_result(path)
+-		if score is None:
+-			print(f'Skipping {path}')
+-			continue
+-		scores.append(score)
+-
+-		suffix = path.split('/')[-1]
+-
+-	mean = np.mean(scores)
+-	err = np.std(scores) / np.sqrt(len(scores))
+-	return mean, err, scores
+-
+-def load_result(path):
+-	'''
+-		path : path to experiment directory; expects `rollout.json` to be in directory
+-	'''
+-	fullpath = os.path.join(path, 'rollout.json')
+-	suffix = path.split('/')[-1]
+-
+-	if not os.path.exists(fullpath):
+-		return None
+-
+-	results = json.load(open(fullpath, 'rb'))
+-	score = results['score']
+-	return score * 100
+-
+-#######################
+-######## setup ########
+-#######################
+-
+-if __name__ == '__main__':
+-
+-	class Parser(utils.Parser):
+-	    dataset: str = None
+-
+-	args = Parser().parse_args()
+-
+-	for dataset in ([args.dataset] if args.dataset else DATASETS):
+-		subdirs = glob.glob(os.path.join(LOGBASE, dataset, EXP_NAME))
+-
+-		for subdir in subdirs:
+-			reldir = subdir.split('/')[-1]
+-			paths = glob.glob(os.path.join(subdir, TRIAL))
+-
+-			mean, err, scores = load_results(paths)
+-			print(f'{dataset.ljust(30)} | {subdir.ljust(50)} | {len(scores)} scores \n    {mean:.2f} +/- {err:.2f}\n')
+diff --git a/halfcheetah/plotting/scores.py b/halfcheetah/plotting/scores.py
+deleted file mode 100644
+index f1917f7..0000000
+--- a/halfcheetah/plotting/scores.py
++++ /dev/null
+@@ -1,123 +0,0 @@
+-means = {
+-	'Trajectory\nTransformer': {
+-		##
+-		'halfcheetah-medium-expert-v2': 95.0,
+-		'hopper-medium-expert-v2': 110.0,
+-		'walker2d-medium-expert-v2': 101.9,
+-		'ant-medium-expert-v2': 116.1,
+-		##
+-		'halfcheetah-medium-v2': 46.9,
+-		'hopper-medium-v2': 61.1,
+-		'walker2d-medium-v2': 79.0,
+-		'ant-medium-v2': 83.1,
+-		##
+-		'halfcheetah-medium-replay-v2': 41.9,
+-		'hopper-medium-replay-v2': 91.5,
+-		'walker2d-medium-replay-v2': 82.6,
+-		'ant-medium-replay-v2': 77.0,
+-	},
+-	'Decision\nTransformer': {
+-		##
+-		'halfcheetah-medium-expert-v2': 86.8,
+-		'hopper-medium-expert-v2': 107.6,
+-		'walker2d-medium-expert-v2': 108.1,
+-		##
+-		'halfcheetah-medium-v2': 42.6,
+-		'hopper-medium-v2': 67.6,
+-		'walker2d-medium-v2': 74.0,
+-		##
+-		'halfcheetah-medium-replay-v2': 36.6,
+-		'hopper-medium-replay-v2': 82.7,
+-		'walker2d-medium-replay-v2': 66.6,
+-	},
+-	'CQL': {
+-		##
+-		'halfcheetah-medium-expert-v2': 91.6,
+-		'hopper-medium-expert-v2': 105.4,
+-		'walker2d-medium-expert-v2': 108.8,
+-		##
+-		'halfcheetah-medium-v2': 44.0,
+-		'hopper-medium-v2': 58.5,
+-		'walker2d-medium-v2': 72.5,
+-		##
+-		'halfcheetah-medium-replay-v2': 45.5,
+-		'hopper-medium-replay-v2': 95.0,
+-		'walker2d-medium-replay-v2': 77.2,
+-	},
+-	'MOPO': {
+-		##
+-		'halfcheetah-medium-expert-v2': 63.3,
+-		'hopper-medium-expert-v2': 23.7,
+-		'walker2d-medium-expert-v2': 44.6,
+-		##
+-		'halfcheetah-medium-v2': 42.3,
+-		'hopper-medium-v2': 28.0,
+-		'walker2d-medium-v2': 17.8,
+-		##
+-		'halfcheetah-medium-replay-v2': 53.1,
+-		'hopper-medium-replay-v2': 67.5,
+-		'walker2d-medium-replay-v2':39.0,
+-	},
+-	'MBOP': {
+-		##
+-		'halfcheetah-medium-expert-v2': 105.9,
+-		'hopper-medium-expert-v2': 55.1,
+-		'walker2d-medium-expert-v2': 70.2,
+-		##
+-		'halfcheetah-medium-v2': 44.6,
+-		'hopper-medium-v2': 48.8,
+-		'walker2d-medium-v2': 41.0,
+-		##
+-		'halfcheetah-medium-replay-v2': 42.3,
+-		'hopper-medium-replay-v2': 12.4,
+-		'walker2d-medium-replay-v2': 9.7,
+-	},
+-	'BRAC': {
+-		##
+-		'halfcheetah-medium-expert-v2': 41.9,
+-		'hopper-medium-expert-v2': 0.9,
+-		'walker2d-medium-expert-v2': 81.6,
+-		##
+-		'halfcheetah-medium-v2': 46.3,
+-		'hopper-medium-v2': 31.3,
+-		'walker2d-medium-v2': 81.1,
+-		##
+-		'halfcheetah-medium-replay-v2': 47.7,
+-		'hopper-medium-replay-v2': 0.6,
+-		'walker2d-medium-replay-v2': 0.9,
+-	},
+-	'BC': {
+-		##
+-		'halfcheetah-medium-expert-v2': 59.9,
+-		'hopper-medium-expert-v2': 79.6,
+-		'walker2d-medium-expert-v2': 36.6,
+-		##
+-		'halfcheetah-medium-v2': 43.1,
+-		'hopper-medium-v2': 63.9,
+-		'walker2d-medium-v2': 77.3,
+-		##
+-		'halfcheetah-medium-replay-v2': 4.3,
+-		'hopper-medium-replay-v2': 27.6,
+-		'walker2d-medium-replay-v2': 36.9,
+-	},
+-}
+-
+-errors = {
+-	'Trajectory\nTransformer': {
+-		##
+-		'halfcheetah-medium-expert-v2': 0.2,
+-		'hopper-medium-expert-v2': 2.7,
+-		'walker2d-medium-expert-v2': 6.8,
+-		'ant-medium-expert-v2': 9.0,
+-		##
+-		'halfcheetah-medium-v2': 0.4,
+-		'hopper-medium-v2': 3.6,
+-		'walker2d-medium-v2': 2.8,
+-		'ant-medium-v2': 7.3,
+-		##
+-		'halfcheetah-medium-replay-v2': 2.5,
+-		'hopper-medium-replay-v2': 3.6,
+-		'walker2d-medium-replay-v2': 6.9,
+-		'ant-medium-replay-v2': 6.8,
+-	},
+-}
+\ No newline at end of file
+diff --git a/halfcheetah/plotting/table.py b/halfcheetah/plotting/table.py
+deleted file mode 100644
+index eae74e6..0000000
+--- a/halfcheetah/plotting/table.py
++++ /dev/null
+@@ -1,127 +0,0 @@
+-import numpy as np
+-import pdb
+-
+-from plotting.plot import get_mean
+-from plotting.scores import (
+-	means as MEANS,
+-	errors as ERRORS,
+-)
+-
+-ALGORITHM_STRINGS = {
+-	'Trajectory\nTransformer': 'TT (Ours)',
+-	'Decision\nTransformer': 'DT',	
+-}
+-
+-BUFFER_STRINGS = {
+-	'medium-expert': 'Medium-Expert',
+-	'medium': 'Medium',
+-	'medium-replay': 'Medium-Replay',	
+-}
+-
+-ENVIRONMENT_STRINGS = {
+-	'halfcheetah': 'HalfCheetah',
+-	'hopper': 'Hopper',
+-	'walker2d': 'Walker2d',
+-	'ant': 'Ant',
+-}
+-
+-SHOW_ERRORS = ['Trajectory\nTransformer']
+-
+-def get_result(algorithm, buffer, environment, version='v2'):
+-	key = f'{environment}-{buffer}-{version}'
+-	mean = MEANS[algorithm].get(key, '-')
+-	if algorithm in SHOW_ERRORS:
+-		error = ERRORS[algorithm].get(key)
+-		return (mean, error)
+-	else:
+-		return mean
+-
+-def format_result(result):
+-	if type(result) == tuple:
+-		mean, std = result
+-		return f'${mean}$ \\scriptsize{{\\raisebox{{1pt}}{{$\\pm {std}$}}}}'
+-	else:
+-		return f'${result}$'
+-
+-def format_row(buffer, environment, results):
+-	buffer_str = BUFFER_STRINGS[buffer]
+-	environment_str = ENVIRONMENT_STRINGS[environment]
+-	results_str = ' & '.join(format_result(result) for result in results)
+-	row = f'{buffer_str} & {environment_str} & {results_str} \\\\ \n'
+-	return row
+-
+-def format_buffer_block(algorithms, buffer, environments):
+-	block_str = '\\midrule\n'
+-	for environment in environments:
+-		results = [get_result(alg, buffer, environment) for alg in algorithms]
+-		row_str = format_row(buffer, environment, results)
+-		block_str += row_str
+-	return block_str
+-
+-def format_algorithm(algorithm):
+-	algorithm_str = ALGORITHM_STRINGS.get(algorithm, algorithm)
+-	return f'\multicolumn{{1}}{{c}}{{\\bf {algorithm_str}}}'
+-
+-def format_algorithms(algorithms):
+-	return ' & '.join(format_algorithm(algorithm) for algorithm in algorithms)
+-
+-def format_averages(means, label):
+-	prefix = f'\\multicolumn{{2}}{{c}}{{\\bf Average ({label})}} & '
+-	formatted = ' & '.join(str(mean) for mean in means)
+-	return prefix + formatted
+-
+-def format_averages_block(algorithms):
+-	means_filtered = [np.round(get_mean(MEANS[algorithm], exclude='ant'), 1) for algorithm in algorithms]
+-	means_all = [np.round(get_mean(MEANS[algorithm], exclude=None), 1) for algorithm in algorithms]
+-
+-	means_all = [
+-		means
+-		if 'ant-medium-expert-v2' in MEANS[algorithm]
+-		else '$-$'
+-		for algorithm, means in zip(algorithms, means_all)
+-	]
+-
+-	formatted_filtered = format_averages(means_filtered, 'without Ant')
+-	formatted_all = format_averages(means_all, 'all settings')
+-
+-	formatted_block = (
+-		f'{formatted_filtered} \\hspace{{.6cm}} \\\\ \n'
+-		f'{formatted_all} \\hspace{{.6cm}} \\\\ \n'
+-	)
+-	return formatted_block
+-
+-def format_table(algorithms, buffers, environments):
+-	justify_str = 'll' + 'r' * len(algorithms)
+-	algorithm_str = format_algorithms(['Dataset', 'Environment'] + algorithms)
+-	averages_str = format_averages_block(algorithms)
+-	table_prefix = (
+-		'\\begin{table*}[h]\n'
+-		'\\centering\n'
+-		'\\small\n'
+-		f'\\begin{{tabular}}{{{justify_str}}}\n'
+-		'\\toprule\n'
+-		f'{algorithm_str} \\\\ \n'
+-	)
+-	table_suffix = (
+-		'\\midrule\n'
+-		f'{averages_str}'
+-		'\\bottomrule\n'
+-		'\\end{tabular}\n'
+-		'\\label{table:d4rl}\n'
+-		'\\end{table*}'
+-	)
+-	blocks = ''.join(format_buffer_block(algorithms, buffer, environments) for buffer in buffers)
+-	table = (
+-		f'{table_prefix}'
+-		f'{blocks}'
+-		f'{table_suffix}'
+-	)
+-	return table
+-
+-
+-algorithms =['BC', 'MBOP', 'BRAC', 'CQL',  'Decision\nTransformer', 'Trajectory\nTransformer']
+-buffers = ['medium-expert', 'medium', 'medium-replay']
+-environments = ['halfcheetah', 'hopper', 'walker2d', 'ant']
+-
+-table = format_table(algorithms, buffers, environments)
+-print(table)
+diff --git a/halfcheetah/scripts/plan.py b/halfcheetah/scripts/plan.py
+deleted file mode 100644
+index f13d4cc..0000000
+--- a/halfcheetah/scripts/plan.py
++++ /dev/null
+@@ -1,124 +0,0 @@
+-import json
+-import pdb
+-from os.path import join
+-
+-import trajectory.utils as utils
+-import trajectory.datasets as datasets
+-from trajectory.search import (
+-    beam_plan,
+-    make_prefix,
+-    extract_actions,
+-    update_context,
+-)
+-
+-class Parser(utils.Parser):
+-    dataset: str = 'halfcheetah-medium-expert-v2'
+-    config: str = 'config.offline'
+-
+-#######################
+-######## setup ########
+-#######################
+-
+-args = Parser().parse_args('plan')
+-
+-#######################
+-####### models ########
+-#######################
+-
+-dataset = utils.load_from_config(args.logbase, args.dataset, args.gpt_loadpath,
+-        'data_config.pkl')
+-
+-gpt, gpt_epoch = utils.load_model(args.logbase, args.dataset, args.gpt_loadpath,
+-        epoch=args.gpt_epoch, device=args.device)
+-
+-#######################
+-####### dataset #######
+-#######################
+-
+-env = datasets.load_environment(args.dataset)
+-print('yo')
+-renderer = utils.make_renderer(args)
+-timer = utils.timer.Timer()
+-
+-discretizer = dataset.discretizer
+-discount = dataset.discount
+-observation_dim = dataset.observation_dim
+-action_dim = dataset.action_dim
+-
+-value_fn = lambda x: discretizer.value_fn(x, args.percentile)
+-preprocess_fn = datasets.get_preprocess_fn(env.name)
+-
+-print('yo2')
+-
+-#######################
+-###### main loop ######
+-#######################
+-
+-observation = env.reset()
+-total_reward = 0
+-
+-## observations for rendering
+-rollout = [observation.copy()]
+-
+-## previous (tokenized) transitions for conditioning transformer
+-context = []
+-
+-T = env.max_episode_steps
+-for t in range(T):
+-
+-    observation = preprocess_fn(observation)
+-
+-    if t % args.plan_freq == 0:
+-        ## concatenate previous transitions and current observations to input to model
+-        prefix = make_prefix(discretizer, context, observation, args.prefix_context)
+-
+-        ## sample sequence from model beginning with `prefix`
+-        sequence = beam_plan(
+-            gpt, value_fn, prefix,
+-            args.horizon, args.beam_width, args.n_expand, observation_dim, action_dim,
+-            discount, args.max_context_transitions, verbose=args.verbose,
+-            k_obs=args.k_obs, k_act=args.k_act, cdf_obs=args.cdf_obs, cdf_act=args.cdf_act,
+-        )
+-
+-    else:
+-        sequence = sequence[1:]
+-
+-    ## [ horizon x transition_dim ] convert sampled tokens to continuous trajectory
+-    sequence_recon = discretizer.reconstruct(sequence)
+-
+-    ## [ action_dim ] index into sampled trajectory to grab first action
+-    action = extract_actions(sequence_recon, observation_dim, action_dim, t=0)
+-
+-    ## execute action in environment
+-    next_observation, reward, terminal, _ = env.step(action)
+-
+-    ## update return
+-    total_reward += reward
+-    score = env.get_normalized_score(total_reward)
+-
+-    ## update rollout observations and context transitions
+-    rollout.append(next_observation.copy())
+-    context = update_context(context, discretizer, observation, action, reward, args.max_context_transitions)
+-
+-    print(
+-        f'[ plan ] t: {t} / {T} | r: {reward:.2f} | R: {total_reward:.2f} | score: {score:.4f} | '
+-        f'time: {timer():.2f} | {args.dataset} | {args.exp_name} | {args.suffix}\n'
+-    )
+-
+-    ## visualization
+-    if t % args.vis_freq == 0 or terminal or t == T:
+-
+-        ## save current plan
+-        renderer.render_plan(join(args.savepath, f'{t}_plan.mp4'), sequence_recon, env.state_vector())
+-
+-        ## save rollout thus far
+-        renderer.render_rollout(join(args.savepath, f'rollout.mp4'), rollout, fps=80)
+-
+-    if terminal: break
+-
+-    observation = next_observation
+-
+-## save result as a json file
+-json_path = join(args.savepath, 'rollout.json')
+-json_data = {'score': score, 'step': t, 'return': total_reward, 'term': terminal, 'gpt_epoch': gpt_epoch}
+-json.dump(json_data, open(json_path, 'w'), indent=2, sort_keys=True)
+diff --git a/halfcheetah/scripts/train.py b/halfcheetah/scripts/train.py
+deleted file mode 100644
+index 04af8d7..0000000
+--- a/halfcheetah/scripts/train.py
++++ /dev/null
+@@ -1,122 +0,0 @@
+-import os
+-import numpy as np
+-import torch
+-import pdb
+-
+-import trajectory.utils as utils
+-import trajectory.datasets as datasets
+-from trajectory.models.transformers import GPT
+-
+-
+-class Parser(utils.Parser):
+-    dataset: str = 'halfcheetah-medium-expert-v2'
+-    config: str = 'config.offline'
+-
+-#######################
+-######## setup ########
+-#######################
+-
+-args = Parser().parse_args('train')
+-
+-#######################
+-####### dataset #######
+-#######################
+-
+-env = datasets.load_environment(args.dataset)
+-
+-sequence_length = args.subsampled_sequence_length * args.step
+-
+-dataset_config = utils.Config(
+-    datasets.DiscretizedDataset,
+-    savepath=(args.savepath, 'data_config.pkl'),
+-    env=args.dataset,
+-    N=args.N,
+-    penalty=args.termination_penalty,
+-    sequence_length=sequence_length,
+-    step=args.step,
+-    discount=args.discount,
+-    discretizer=args.discretizer,
+-)
+-
+-dataset = dataset_config()
+-obs_dim = dataset.observation_dim
+-act_dim = dataset.action_dim
+-transition_dim = dataset.joined_dim
+-
+-#######################
+-######## model ########
+-#######################
+-
+-block_size = args.subsampled_sequence_length * transition_dim - 1
+-print(
+-    f'Dataset size: {len(dataset)} | '
+-    f'Joined dim: {transition_dim} '
+-    f'(observation: {obs_dim}, action: {act_dim}) | Block size: {block_size}'
+-)
+-
+-model_config = utils.Config(
+-    GPT,
+-    savepath=(args.savepath, 'model_config.pkl'),
+-    ## discretization
+-    vocab_size=args.N, block_size=block_size,
+-    ## architecture
+-    n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd*args.n_head,
+-    ## dimensions
+-    observation_dim=obs_dim, action_dim=act_dim, transition_dim=transition_dim,
+-    ## loss weighting
+-    action_weight=args.action_weight, reward_weight=args.reward_weight, value_weight=args.value_weight,
+-    ## dropout probabilities
+-    embd_pdrop=args.embd_pdrop, resid_pdrop=args.resid_pdrop, attn_pdrop=args.attn_pdrop,
+-)
+-
+-model = model_config()
+-model.to(args.device)
+-
+-#######################
+-####### trainer #######
+-#######################
+-
+-warmup_tokens = len(dataset) * block_size ## number of tokens seen per epoch
+-final_tokens = 20 * warmup_tokens
+-
+-trainer_config = utils.Config(
+-    utils.Trainer,
+-    savepath=(args.savepath, 'trainer_config.pkl'),
+-    # optimization parameters
+-    batch_size=args.batch_size,
+-    learning_rate=args.learning_rate,
+-    betas=(0.9, 0.95),
+-    grad_norm_clip=1.0,
+-    weight_decay=0.1, # only applied on matmul weights
+-    # learning rate decay: linear warmup followed by cosine decay to 10% of original
+-    lr_decay=args.lr_decay,
+-    warmup_tokens=warmup_tokens,
+-    final_tokens=final_tokens,
+-    ## dataloader
+-    num_workers=0,
+-    device=args.device,
+-)
+-
+-trainer = trainer_config()
+-
+-#######################
+-###### main loop ######
+-#######################
+-
+-## scale number of epochs to keep number of updates constant
+-n_epochs = int(1e6 / len(dataset) * args.n_epochs_ref)
+-save_freq = int(n_epochs // args.n_saves)
+-
+-for epoch in range(n_epochs):
+-    print(f'\nEpoch: {epoch} / {n_epochs} | {args.dataset} | {args.exp_name}')
+-
+-    trainer.train(model, dataset)
+-
+-    ## get greatest multiple of `save_freq` less than or equal to `save_epoch`
+-    save_epoch = (epoch + 1) // save_freq * save_freq
+-    statepath = os.path.join(args.savepath, f'state_{save_epoch}.pt')
+-    print(f'Saving model to {statepath}')
+-
+-    ## save state to disk
+-    state = model.state_dict()
+-    torch.save(state, statepath)
+diff --git a/halfcheetah/scripts/xrl.py b/halfcheetah/scripts/xrl.py
+deleted file mode 100644
+index 134232a..0000000
+--- a/halfcheetah/scripts/xrl.py
++++ /dev/null
+@@ -1,372 +0,0 @@
+-import json
+-import pdb
+-from os.path import join
+-
+-import trajectory.utils as utils
+-import trajectory.datasets as datasets
+-from trajectory.search import (
+-    make_prefix,
+-    update_context,
+-)
+-from trajectory.search.sampling import forward
+-
+-import gym
+-import d4rl # Import required to register environments, you may need to also import the submodule
+-import numpy as np
+-import d3rlpy
+-import math as mt
+-from sklearn.cluster import KMeans
+-from sklearn import datasets as skdatasets
+-from sklearn.decomposition import PCA
+-
+-from pyclustering.cluster.xmeans import xmeans
+-from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
+-
+-from scipy.stats import wasserstein_distance
+-
+-class Parser(utils.Parser):
+-    dataset: str = 'halfcheetah-medium-expert-v2'
+-    config: str = 'config.offline'
+-
+-# utils
+-    
+-class XMeans:
+-    def loglikelihood(self, r, rn, var, m, k):
+-        l1 = - rn / 2.0 * mt.log(2 * mt.pi)
+-        l2 = - rn * m / 2.0 * mt.log(var)
+-        l3 = - (rn - k) / 2.0
+-        l4 = rn * mt.log(rn)
+-        l5 = - rn * mt.log(r)
+-
+-        return l1 + l2 + l3 + l4 + l5
+-
+-    def __init__(self, X, kmax = 20):
+-        self.X = X
+-        self.num = np.size(self.X, axis=0)
+-        self.dim = np.size(X, axis=1)
+-        self.KMax = kmax
+-
+-    def fit(self):
+-        k = 1
+-        X = self.X
+-        M = self.dim
+-        num = self.num
+-
+-        while(1):
+-            ok = k
+-
+-            #Improve Params
+-            kmeans = KMeans(n_clusters=k).fit(X)
+-            labels = kmeans.labels_
+-            m = kmeans.cluster_centers_
+-
+-            #Improve Structure
+-            #Calculate BIC
+-            p = M + 1
+-
+-            obic = np.zeros(k)
+-
+-            for i in range(k):
+-                rn = np.size(np.where(labels == i))
+-                var = np.sum((X[labels == i] - m[i])**2)/float(rn - 1)
+-                obic[i] = self.loglikelihood(rn, rn, var, M, 1) - p/2.0*mt.log(rn)
+-
+-            #Split each cluster into two subclusters and calculate BIC of each splitted cluster
+-            sk = 2 #The number of subclusters
+-            nbic = np.zeros(k)
+-            addk = 0
+-
+-            for i in range(k):
+-                ci = X[labels == i]
+-                r = np.size(np.where(labels == i))
+-
+-                kmeans = KMeans(n_clusters=sk).fit(ci)
+-                ci_labels = kmeans.labels_
+-                sm = kmeans.cluster_centers_
+-
+-                for l in range(sk):
+-                    rn = np.size(np.where(ci_labels == l))
+-                    var = np.sum((ci[ci_labels == l] - sm[l])**2)/float(rn - sk)
+-                    nbic[i] += self.loglikelihood(r, rn, var, M, sk)
+-
+-                p = sk * (M + 1)
+-                nbic[i] -= p/2.0*mt.log(r)
+-
+-                if obic[i] < nbic[i]:
+-                    addk += 1
+-
+-            k += addk
+-
+-            if ok == k or k >= self.KMax:
+-                break
+-
+-
+-        #Calculate labels and centroids
+-        kmeans = KMeans(n_clusters=k).fit(X)
+-        self.labels = kmeans.labels_
+-        self.k = k
+-        self.m = kmeans.cluster_centers_
+-
+-
+-def cluster_trajectories(trajectories):
+-    xmeans_instance = XMeans(trajectories, kmax=10)
+-    xmeans_instance.fit()
+-
+-    clusters = xmeans_instance.labels
+-    return clusters
+-
+-def cluster_trajectories_2(trajectories):
+-    # Prepare initial centers - amount of initial centers defines amount of clusters from which X-Means will
+-    # start analysis.
+-    amount_initial_centers = 2
+-    initial_centers = kmeans_plusplus_initializer(trajectories, amount_initial_centers).initialize()
+-    
+-    # Create instance of X-Means algorithm. The algorithm will start analysis from 2 clusters, the maximum
+-    # number of clusters that can be allocated is 10.
+-    xmeans_instance = xmeans(trajectories, initial_centers, 10)
+-    xmeans_instance.process()
+-    
+-    # Extract clustering results: clusters
+-    idxs_per_cluster = xmeans_instance.get_clusters()
+-
+-    clusters = []
+-    for i in range(len(trajectories)):
+-        for j in range(len(idxs_per_cluster)):
+-            if i in idxs_per_cluster[j]: clusters.append(j)
+-
+-    return idxs_per_cluster, np.array(clusters)
+- 
+-# https://github.com/sascha-kirch/ML_Notebooks/blob/main/Softmax_Temperature.ipynb
+-def softmax(x, temp):
+-    """Compute softmax values for each sets of scores in x."""
+-    return np.exp(np.divide(x,temp)) / np.sum(np.exp(np.divide(x,temp)))
+-
+-def generate_data_embedding(trajectory_embeddings, normalizing_factor=1, temperature=1):
+-    embedding = np.sum(trajectory_embeddings, axis=0) / normalizing_factor
+-    embedding = softmax(embedding, temperature)
+-    return embedding
+-
+-def embed_trajectory(gpt, discretizer, observations, actions, rewards, preprocess_fn):
+-    context = []
+-
+-    for i in range(len(observations)):
+-        observation = observations[i]
+-        action = actions[i]
+-        reward = rewards[i]
+-
+-        observation = preprocess_fn(observation)
+-
+-        # print(observation)
+-        prefix = make_prefix(discretizer, context, observation, True)
+-        # print("prefix", prefix.shape)
+-
+-        out = forward(gpt, prefix)
+-        # print("out", out.shape)
+-        context = update_context(context, discretizer, observation, action, reward, len(observations))
+-        # print("cotext", context)
+-    
+-    emb = []
+-    for context_step in context:
+-        emb.append(context_step.numpy())
+-    emb = np.array(emb)
+-    emb = np.mean(emb, axis=0)[0]
+-
+-    return emb
+-
+-
+-def create_complementary_dataset(dataset, idxs, trajectory_length=10):
+-    observations = []
+-    actions = []
+-    rewards = []
+-    terminals = []
+-    for i in range(1000):
+-        if i not in idxs:
+-            observations += list(dataset.observations[1000*i:1000*i+trajectory_length])
+-            actions += list(dataset.actions[1000*i:1000*i+trajectory_length])
+-            rewards += list(dataset.rewards[1000*i:1000*i+trajectory_length])
+-            terminals += list(dataset.terminals[1000*i:1000*i+trajectory_length])
+-
+-    new_dataset = d3rlpy.dataset.MDPDataset(
+-        observations=np.array(observations),
+-        actions=np.array(actions),
+-        rewards=np.array(rewards),
+-        terminals=np.array(terminals)
+-    )
+-    return new_dataset
+-    
+-
+-
+-
+-def main():
+-    # args = Parser().parse_args('plan')
+-
+-    #######################
+-    ####### models ########
+-    #######################
+-
+-
+-
+-
+-
+-    # print(args.dataset)
+-
+-    # dataset = utils.load_from_config(args.logbase, args.dataset, args.gpt_loadpath,
+-    #         'data_config.pkl')
+-
+-
+-    # gpt, gpt_epoch = utils.load_model(args.logbase, args.dataset, args.gpt_loadpath,
+-    #         epoch=args.gpt_epoch, device=args.device)
+-
+-    # env = datasets.load_environment(args.dataset)
+-
+-    # discretizer = dataset.discretizer
+-
+-    # preprocess_fn = datasets.get_preprocess_fn(env.name)
+-
+-    # #######################
+-    # ####### dataset #######
+-    # #######################
+-
+-    # # env = datasets.load_environment(args.dataset)
+-    # discretizer = dataset.discretizer
+-    # preprocess_fn = datasets.get_preprocess_fn(env.name)
+-
+-    # # dataset
+-    dataset_d3, env = d3rlpy.datasets.get_dataset("halfcheetah-medium-v2")
+-
+-    # env = gym.make('halfcheetah-medium-v2')
+-    # dataset_d4 = d4rl.qlearning_dataset(env)
+-
+-    # # checks to see if d3rl & d4rl datasets are equal
+-    # print(np.allclose(dataset_d3.actions[100], dataset_d4['actions'][100]))
+-
+-    # # dr4rl has same trajectories, just cut off 1 element before the end
+-    # for j in range(1000):
+-    #     for i in range(999):
+-    #         if dataset_d4['rewards'][j * 999 + i] != dataset_d3.rewards[j * 1000 + i]: print("yo", i)
+-
+-    # #######################
+-    # ###### main loop ######
+-    # #######################
+-
+-    trajectory_length = 10 # 10 = max
+-
+-    # embeddings = []
+-    # for i in range(1000):
+-    #     observations = dataset_d3.observations[1000*i:1000*i+trajectory_length]
+-    #     actions = dataset_d3.actions[1000*i:1000*i+trajectory_length]
+-    #     rewards = dataset_d3.rewards[1000*i:1000*i+trajectory_length]
+-    #     terminals = dataset_d3.terminals[1000*i:1000*i+trajectory_length]
+-    #     emb = embed_trajectory(gpt, discretizer, observations, actions, rewards, preprocess_fn)
+-    #     embeddings.append(emb)
+-    # embeddings = np.array(embeddings)
+-    # np.save("embeddings.npy", embeddings)
+-    # print(embeddings)
+-
+-    embeddings = np.load("embeddings.npy")
+-
+-    pca = PCA(n_components=2)
+-    pca = PCA(n_components=2)
+-    pca_embeddings = pca.fit_transform(embeddings)
+-    np.save("pca.py", pca_embeddings)
+-
+-    idxs_per_cluster, clusters = cluster_trajectories_2(embeddings)
+-    # print(clusters)
+-    # return
+-    np.save("clusters.npy", clusters)
+-
+-    import matplotlib.pyplot as plt
+-
+-    d_orig = generate_data_embedding(embeddings)
+-    unique_clusters = np.unique(clusters)
+-    
+-    d_j = []
+-    complementary_datasets = []
+-    for j in np.sort(unique_clusters):
+-        print(j)
+-        d_j.append(generate_data_embedding(embeddings[clusters != j]))
+-        plt.scatter(pca_embeddings[clusters == j][:,0], pca_embeddings[clusters == j][:,1], label=j)
+-        complementary_datasets.append(create_complementary_dataset(dataset_d3, idxs_per_cluster[j], trajectory_length))
+-    
+-    original_dataset = create_complementary_dataset(dataset_d3, [], trajectory_length)
+-
+-    print(complementary_datasets, original_dataset)
+-
+-    plt.legend()
+-    plt.show()
+-
+-    agent_orig = d3rlpy.algos.SAC(
+-        actor_learning_rate=3e-4,
+-        critic_learning_rate=3e-4,
+-        temp_learning_rate=3e-4,
+-        batch_size=256)
+-
+-    print(agent_orig)
+-
+-    training_steps = 1000
+-
+-    agent_orig.fit(original_dataset, n_steps=training_steps)
+-
+-    agents_compl = []
+-
+-    for dset in complementary_datasets:
+-        agent = d3rlpy.algos.SAC(
+-            actor_learning_rate=3e-4,
+-            critic_learning_rate=3e-4,
+-            temp_learning_rate=3e-4,
+-            batch_size=256)
+-        agent.fit(dset, n_steps=training_steps)
+-        agents_compl.append(agent)
+-
+-    action_orig = agent_orig.predict(dataset_d3.observations[0])
+-
+-    actions_compl = []
+-    for agent in agents_compl:
+-        actions_compl.append(agent.predict(dataset_d3.observations[0]))
+-    
+-    action_dists = []
+-    for action in actions_compl:
+-        action_dists.append(np.linalg.norm(action_orig-action))
+-
+-    k = 3
+-    topk = np.argpartition(action_dists, -k)[-k:]
+-
+-    d_w = {}
+-    for idx in topk:
+-        d_w[idx] = wasserstein_distance(d_j[idx], d_orig)
+-
+-    cluster_assignment = min(d_w, key=d_w.get)
+-    print("explanation assigned to cluster", cluster_assignment)
+-
+-    
+-def assignment_test():
+-    action_orig = np.random.rand(10)
+-    d_orig = np.random.rand(5)
+-
+-    actions_compl = np.random.rand(6,10)
+-    d_j = np.random.rand(6,5)
+-
+-    action_dists = []
+-    for action in actions_compl:
+-        action_dists.append(np.linalg.norm(action_orig-action))
+-
+-    print(action_dists)
+-
+-    k = 3
+-    topk = np.argpartition(action_dists, -k)[-k:]
+-
+-    print(topk)
+-
+-    d_w = {}
+-    for idx in topk:
+-        d_w[idx] = wasserstein_distance(d_j[idx], d_orig)
+-
+-    print(d_w)
+-
+-    cluster_assignment = min(d_w, key=d_w.get)
+-    print("explanation assigned to cluster", cluster_assignment)
+-
+-
+-if __name__ == "__main__":
+-    # main()
+-    assignment_test()
+diff --git a/halfcheetah/trajectory.egg-info/PKG-INFO b/halfcheetah/trajectory.egg-info/PKG-INFO
+index 452c6cb..2603850 100644
+--- a/halfcheetah/trajectory.egg-info/PKG-INFO
++++ b/halfcheetah/trajectory.egg-info/PKG-INFO
+@@ -1,4 +1,11 @@
+ Metadata-Version: 2.1
+ Name: trajectory
+ Version: 0.0.0
++Summary: UNKNOWN
++Home-page: UNKNOWN
++License: UNKNOWN
++Platform: UNKNOWN
+ License-File: LICENSE
++
++UNKNOWN
++
+diff --git a/halfcheetah/trajectory.egg-info/SOURCES.txt b/halfcheetah/trajectory.egg-info/SOURCES.txt
+index 4474d85..84e8e3a 100644
+--- a/halfcheetah/trajectory.egg-info/SOURCES.txt
++++ b/halfcheetah/trajectory.egg-info/SOURCES.txt
+@@ -30,4 +30,5 @@ trajectory/utils/serialization.py
+ trajectory/utils/setup.py
+ trajectory/utils/timer.py
+ trajectory/utils/training.py
+-trajectory/utils/video.py
+\ No newline at end of file
++trajectory/utils/video.py
++trajectory_aaa/__init__.py
+\ No newline at end of file
+diff --git a/halfcheetah/trajectory.egg-info/top_level.txt b/halfcheetah/trajectory.egg-info/top_level.txt
+index ce65198..1d5271f 100644
+--- a/halfcheetah/trajectory.egg-info/top_level.txt
++++ b/halfcheetah/trajectory.egg-info/top_level.txt
+@@ -1 +1,2 @@
+ trajectory
++trajectory_aaa
