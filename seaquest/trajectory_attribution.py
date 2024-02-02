@@ -40,7 +40,7 @@ def create_trajectories_from_dataset(dataset, sub_traj_len=30):
     - reward_traj: torch.Tensor, shape (num_sub_trajs, sub_traj_len, 1)
     - num_sub_trajs: int, number of sub trajectories
     """ 
-    num_trajs = 717
+    num_trajs = 717 # for testing can be set to a lower value
     sub_trajs = []
     current_traj = []
     num_sar = 0
@@ -117,6 +117,7 @@ def encode_trajectories(observation_traj, action_traj, reward_traj, num_sub_traj
         sub_traj_embs[batch_size*idx:batch_size*(idx+1)] = emb.detach().numpy()
         
     return sub_traj_embs
+
 
 
 def cluster_trajectories(sub_traj_embs, plot=False, num_clusters=8):
@@ -532,7 +533,7 @@ def run_trajectory_attribution(load_emb = False, load_model=False, plot_clusters
     return attributions, metrics
     
 if __name__ == "__main__":
-    attributions, metrics = run_trajectory_attribution(load_emb=True, load_model=True, plot_clusters=False, save_attributions=True, pick_traj=False, n_fit_steps=10000, n_runs=5)
+    attributions, metrics = run_trajectory_attribution(load_emb=False, load_model=False, plot_clusters=True, save_attributions=True, pick_traj=True, n_fit_steps=10000, n_runs=2)
     
     # TODO:
     # - Fit discrete SAC agents for more epochs
