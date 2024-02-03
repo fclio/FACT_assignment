@@ -1,0 +1,14 @@
+pyclustering
+tqdm
+matplotlib
+seaborn
+scienceplots
+torch
+pandas
+scikit-learn
+jupyter
+ipykernel
+numpy==1.23.4
+gymnasium[mujoco]
+d3rlpy
+
