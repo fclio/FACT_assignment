@@ -1,10 +1,25 @@
 # Reproducibility study of "Explaining RL decisions with trajectories"
+Authors: Clio Feng, Bart den Boef, Bart Aaldering, and Colin Bot.
 This study reproduces the results and adds additional experiments to the paper by Deshmukh et al. (2023).
 
 Shripad Vilasrao Deshmukh, Arpan Dasgupta, Balaji Krishnamurthy, Nan Jiang, Chirag Agarwal, Georgios
-Theocharous, and Jayakumar Subramanian. Explaining rl decisions with trajectories, 2023.
+Theocharous, and Jayakumar Subramanian. Explaining RL Decisions with Trajectories, 2023.
 
 ## To run the code: 
+### Grid-world (code provided by original authors)
+Install the conda environment:
+~~~shell
+cd gridworld
+conda create -n xrl python=3.8 -y
+conda activate xrl
+pip install -r requirements.txt
+python -m ipykernel install --user --name xrl
+~~~~
+Then run the 'gridworld_expts.ipynb' notebook and activate the 'xrl' kernel to get the results. 
+Note that this notebook includes the extension testing alternative clustering methods.
+
+
+
 ### Seaquest 
 Run the following commands to install the required packages.
 
