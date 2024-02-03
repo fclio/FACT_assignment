@@ -34,3 +34,17 @@ Then run the main file to get the results.
 ~~~shell
 python3 trajectory_attribution.py
 ~~~
+
+### HalfCheetah 
+Build from the environment_HC.yml and install and install the correct GCC:
+~~~shell
+cd halfcheetah
+conda env create -f environment_HC.yml
+conda activate halfcheetah
+conda install -c conda-forge libstdcxx-ng
+~~~~
+Then run the main file to get the results.
+~~~shell
+python3 experiment.py --dataset halfcheetah-medium-v2     --gpt_loadpath gpt/pretrained
+~~~
+
