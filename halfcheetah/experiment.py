@@ -1,5 +1,6 @@
 """
-TODO HEADER
+Main experiment code for the HalfCheetah environment from 'Reproducibility Study 
+of "Explaining RL Decisions with Trajectories"'
 """
 
 import os
@@ -21,54 +22,29 @@ from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from scipy.stats import wasserstein_distance
 from moviepy.editor import VideoFileClip
 
+
 class Parser(utils.Parser):
     dataset: str = 'halfcheetah-medium-v2'
     config: str = 'config.offline'
 
-# utils
-
-def cluster_trajectories(trajectories, n_clusters=10):
-    """TODO"""
-
-    # Prepare initial centers - amount of initial centers defines amount of clusters from which X-Means will
-    # start analysis.
-    amount_initial_centers = 2
-    initial_centers = kmeans_plusplus_initializer(trajectories, amount_initial_centers).initialize()
-    
-    # Create instance of X-Means algorithm. The algorithm will start analysis from 2 clusters, the maximum
-    # number of clusters that can be allocated is 10.
-    xmeans_instance = xmeans(trajectories, initial_centers, n_clusters)
-    xmeans_instance.process()
-    
-    # Extract clustering results: clusters
-    idxs_per_cluster = xmeans_instance.get_clusters()
-
-    clusters = []
-    for i in range(len(trajectories)):
-        for j in range(len(idxs_per_cluster)):
-            if i in idxs_per_cluster[j]: clusters.append(j)
-
-    return idxs_per_cluster, np.array(clusters)
- 
-def softmax(x, temp):
-    """TODO"""
-    max_x = np.max(x)
-    return np.exp(np.divide(x-max_x,temp)) / np.sum(np.exp(np.divide(x-max_x,temp)))
-
-def generate_data_embedding(trajectory_embeddings, temperature=10000):
-    """TODO"""
-
-    embedding = np.sum(trajectory_embeddings, axis=0)
-    embedding = softmax(embedding, temperature)
-    
-
-    return embedding
 
 def embed_trajectory(gpt, discretizer, observations, actions, rewards, preprocess_fn):
-    """TODO"""
+    """
+    Encode trajectory using a trajectory transformer with a sliding window.
+    
+    Args:
+    - gpt: trajectory transformer
+    - discretizer: environment discretizer
+    - observations: trajectory observations
+    - actions: trajectory actions
+    - rewards: trajectory rewards
+    - preprocess_fn: observations preprocessing functions
+    
+    Returns:
+    - embedding: np.array, shape (hidden_dim), encoded trajectory
+    """ 
 
     context = []
-
     output = []
 
     for i in range(len(observations)):
@@ -76,12 +52,12 @@ def embed_trajectory(gpt, discretizer, observations, actions, rewards, preproces
         action = actions[i]
         reward = rewards[i]
 
+        # Preprocess, discretize & forward through trajectory transformer
         observation = preprocess_fn(observation)
-
         prefix = make_prefix(discretizer, context, observation, True)
-
         out = forward(gpt, prefix)
 
+        # Sliding window
         if len(context) >= 9:
             context.pop(0)
             if len(output) == 0:
@@ -91,19 +67,85 @@ def embed_trajectory(gpt, discretizer, observations, actions, rewards, preproces
 
         context = update_context(context, discretizer, observation, action, reward, len(observations))
 
-    emb = np.mean(output, axis=0)
-    return emb
+    # Embedding is the average of encoded states
+    embedding = np.mean(output, axis=0)
+    return embedding
+
+
+def cluster_trajectories(trajectories, n_clusters=10):
+    """
+    Cluster trajectories using X-means.
+    
+    Args:
+    - trajectories: np.array, shape (n_trajectories, encoding_dim)
+    - n_clusters: int, max number of clusters
+    
+    Returns:
+    - idxs_per_cluster: list, trajectory idxs per cluster idxs
+    - clusters: np.array, shape (n_trajectories), cluster idxs per trajectory idx
+    """ 
+
+    # Set 2 initial cluster centers
+    amount_initial_centers = 2
+    initial_centers = kmeans_plusplus_initializer(trajectories, amount_initial_centers).initialize()
+    
+    # Run X-means
+    xmeans_instance = xmeans(trajectories, initial_centers, n_clusters)
+    xmeans_instance.process()
+    
+    # Extract clustering results: clusters
+    idxs_per_cluster = xmeans_instance.get_clusters()
+
+    # Turn list of trajectory idxs per cluster to array of cluster idx per trajectory idx
+    clusters = []
+    for i in range(len(trajectories)):
+        for j in range(len(idxs_per_cluster)):
+            if i in idxs_per_cluster[j]: clusters.append(j)
+
+    return idxs_per_cluster, np.array(clusters)
+
+
+def clusters_to_idxs(clusters):
+    """
+    Helper function to turn array of cluster idxs per trajectory idxs to a list 
+    of trajectory idxs per cluster idx.
+    
+    Args:
+    - clusters: np.array, cluster idx per trajectory idx
+
+    Returns:
+    - idxs_per_cluster: list, trajectory idxs per cluster idx
+    """ 
+
+    idxs_per_cluster = []
+    for i in np.sort(np.unique(clusters)):
+        idxs_per_cluster.append(list(np.argwhere(clusters == i).flatten()))
+    
+    return idxs_per_cluster
+
 
 def create_complementary_dataset(dataset, idxs, trajectory_length=10, inverse=False):
-    """TODO"""
+    """
+    Encode trajectory using a trajectory transformer with a sliding window.
+    
+    Args:
+    - dataset: MDPDataset, original d3rl dataset
+    - idxs: trajectory idxs to ignore (or include if inverse is True)
+    - trajectory_length: int, trajectory length
+    - inverse: bool, if True the dataset is not complementary
+
+    Returns:
+    - new_dataset: MDPDataset, complementary dataset
+    """ 
 
     observations = []
     actions = []
     rewards = []
     terminals = []
 
-    n_trajs = int(1000000/trajectory_length)
+    n_trajs = int(len(dataset.observations)/trajectory_length)
     for i in range(n_trajs):
+        # If inverse is True, only include idxs. If not, leave out idxs
         condition = i not in idxs
         if inverse: condition = not condition
 
@@ -112,6 +154,7 @@ def create_complementary_dataset(dataset, idxs, trajectory_length=10, inverse=Fa
             actions += list(dataset.actions[trajectory_length*i:trajectory_length*(i+1)])
             rewards += list(dataset.rewards[trajectory_length*i:trajectory_length*(i+1)])
 
+    # Trajectories end with a terminal state
     terminals = np.tile([0]*(trajectory_length-1)+[1], int(len(observations)/trajectory_length))
 
     new_dataset = d3rlpy.dataset.MDPDataset(
@@ -121,20 +164,48 @@ def create_complementary_dataset(dataset, idxs, trajectory_length=10, inverse=Fa
         terminals=np.array(terminals),
     )
     return new_dataset
-    
 
-def clusters_to_idxs(clusters):
-    idxs_per_cluster = []
-    for i in np.sort(np.unique(clusters)):
-        idxs_per_cluster.append(list(np.argwhere(clusters == i).flatten()))
+
+def softmax(x, temp):
+    """
+    Softmax with temperature using max-trick.
     
-    return idxs_per_cluster
+    Args:
+    - x: np.array, shape (n_data, dim_data)
+    - temp: int, softmax temperature
+    
+    Returns:
+    - softmax_x: np.array: shape (dim_data)
+    """ 
+
+    max_x = np.max(x)
+    softmax_x = np.exp(np.divide(x-max_x,temp)) / np.sum(np.exp(np.divide(x-max_x,temp)))
+    return softmax_x
+
+
+def generate_data_embedding(trajectory_embeddings, temperature=10000):
+    """
+    Generate data embedding (sum+softmax) for set of encoded trajectories.
+    
+    Args:
+    - trajectory_embeddings: np.array, shape (n_data, dim_data)
+    - temperature: int, softmax temperature
+    
+    Returns:
+    - embedding: np.array, shape (dim_data)
+    """ 
+
+    embedding = np.sum(trajectory_embeddings, axis=0)
+    embedding = softmax(embedding, temperature)
+    
+    return embedding
 
 
 def main():
-
+    """
+    Main experiment code.
+    """ 
     args = Parser().parse_args('plan')
-
 
     ### DATASET ###
 
@@ -142,10 +213,10 @@ def main():
 
     ### IMPORTANT DEFINITIONS XRL SCRIPT ###
 
-    load_embeddings = False
-    load_clusters = True
-    load_agents = True
-    generate_human_study = False
+    load_embeddings = True # If True, load embeddings from numpy binary.
+    load_clusters = True # If True, load clusters from numpy binary.
+    load_agents = True # If True, load agents from pytorch binaries.
+    generate_human_study = False # If True, generate mp4s & gifs for explained trajectories
     
     seed = 4 
     trajectory_length = 25 # 10 = max
@@ -160,12 +231,11 @@ def main():
     if load_embeddings:
         embeddings = np.load(f"{logging_folder}/embeddings.npy")
     else:
-   
         ### TRAJECTORY TRANSFORMER ###
     
         dataset = utils.load_from_config(args.logbase, args.dataset, args.gpt_loadpath,
                 'data_config.pkl')
-        gpt, gpt_epoch = utils.load_model(args.logbase, args.dataset, args.gpt_loadpath,
+        gpt, _ = utils.load_model(args.logbase, args.dataset, args.gpt_loadpath,
                 epoch=args.gpt_epoch, device=args.device)
         env = datasets.load_environment(args.dataset)
         discretizer = dataset.discretizer
@@ -179,7 +249,6 @@ def main():
             observations = dataset_d3.observations[trajectory_length*i:trajectory_length*(i+1)]
             actions = dataset_d3.actions[trajectory_length*i:trajectory_length*(i+1)]
             rewards = dataset_d3.rewards[trajectory_length*i:trajectory_length*(i+1)]
-            terminals = dataset_d3.terminals[trajectory_length*i:trajectory_length*(i+1)]
             emb = embed_trajectory(gpt, discretizer, observations, actions, rewards, preprocess_fn)
             embeddings.append(emb)
         embeddings = np.array(embeddings)
@@ -215,7 +284,7 @@ def main():
     d_j = []
     complementary_datasets = []
     cluster_datasets = []
-    fig, ax = plt.subplots(figsize=(5,4))
+    _, ax = plt.subplots(figsize=(5,4))
     for j in np.sort(unique_clusters):
         d_j.append(generate_data_embedding(embeddings[clusters != j], temperature=temperature))
         ax.scatter(pca_embeddings[pca_clusters == j][:,0], pca_embeddings[pca_clusters == j][:,1], label=j)
@@ -271,13 +340,14 @@ def main():
 
     ### OBSERVATION EXPLANATION (cluster assignment) ###
 
-    original_state = np.random.get_state()
+    # Always generate the same idxs_to_explain by seeding to 0 and reseeding
     np.random.seed(0)
     idxs_to_explain = np.random.choice(range(len(dataset_d3.observations)), 1000, replace=False)
-    np.random.set_state(original_state)
+    np.random.seed(seed)
 
     observations_to_explain = [dataset_d3.observations[i] for i in idxs_to_explain] 
 
+    # Metrics
     ISVE = []
     ISVE_orig = 0.
     LMAAVD = []
@@ -318,7 +388,7 @@ def main():
 
         ### OBSERVATION EXPLANATION (metrics) ###
 
-        # Initial State Value Estimate
+        # Initial State Value Estimate: sample 10 actions in the state and average predicted value
  
         V_s = 0.
         for _ in range(10):
@@ -356,18 +426,16 @@ def main():
             ### RENDERING ###
             if not os.path.isdir(f"{logging_folder}/gifs/question_{ctr}"): os.mkdir(f"{logging_folder}/gifs/question_{ctr}")
 
+            # Trajectory up until the observation to be explained
             rollout = dataset_d3.observations[idxs_to_explain[ctr]-25:idxs_to_explain[ctr]]
-            print(idxs_to_explain[ctr])
-            print(rollout)
             renderer = utils.make_renderer(args)
             rollout_savepath = f"{logging_folder}/mp4s/question_{ctr}/traj_to_explain.mp4"
             renderer.render_rollout(rollout_savepath, rollout, fps=10)
             videoClip = VideoFileClip(f"{logging_folder}/mp4s/question_{ctr}/traj_to_explain.mp4")
             videoClip.write_gif(f"{logging_folder}/gifs/question_{ctr}/traj_to_explain.gif")
 
-
+            # Individually attributed trajectory
             rollout = cluster_datasets[cluster_assignment].observations[assigned_trajectory.astype(int)]
-            print(rollout)
             renderer = utils.make_renderer(args)
             rollout_savepath = f"{logging_folder}/mp4s/question_{ctr}/traj_assigned_cluster_attr.mp4"
             renderer.render_rollout(rollout_savepath, rollout, fps=10)
@@ -376,44 +444,42 @@ def main():
 
             random_trajs = np.random.randint(len(cluster_datasets[cluster_assignment])//25, size=3)
 
+            # Random trajectory from attributed cluster #1
             rollout = cluster_datasets[cluster_assignment].observations[random_trajs[0]*25:(random_trajs[0]+1)*25]
-            print(rollout)
             renderer = utils.make_renderer(args)
             rollout_savepath = f"{logging_folder}/mp4s/question_{ctr}/traj_assigned_cluster_1.mp4"
             renderer.render_rollout(rollout_savepath, rollout, fps=10)
             videoClip = VideoFileClip(f"{logging_folder}/mp4s/question_{ctr}/traj_assigned_cluster_1.mp4")
             videoClip.write_gif(f"{logging_folder}/gifs/question_{ctr}/traj_assigned_cluster_1.gif")
 
+            # Random trajectory from attributed cluster #2
             rollout = cluster_datasets[cluster_assignment].observations[random_trajs[1]*25:(random_trajs[1]+1)*25]
-            print(rollout)
             renderer = utils.make_renderer(args)
             rollout_savepath = f"{logging_folder}/mp4s/question_{ctr}/traj_assigned_cluster_2.mp4"
             renderer.render_rollout(rollout_savepath, rollout, fps=10)
             videoClip = VideoFileClip(f"{logging_folder}/mp4s/question_{ctr}/traj_assigned_cluster_2.mp4")
             videoClip.write_gif(f"{logging_folder}/gifs/question_{ctr}/traj_assigned_cluster_2.gif")
 
-
+            # Random trajectory from attributed cluster #3
             rollout = cluster_datasets[cluster_assignment].observations[random_trajs[2]*25:(random_trajs[2]+1)*25]
-            print(rollout)
             renderer = utils.make_renderer(args)
             rollout_savepath = f"{logging_folder}/mp4s/question_{ctr}/traj_assigned_cluster_3.mp4"
             renderer.render_rollout(rollout_savepath, rollout, fps=10)
             videoClip = VideoFileClip(f"{logging_folder}/mp4s/question_{ctr}/traj_assigned_cluster_3.mp4")
             videoClip.write_gif(f"{logging_folder}/gifs/question_{ctr}/traj_assigned_cluster_3.gif")
 
-
+            # Random trajectory from random other (non-assigned) cluster
             different_cluster = 0 if cluster_assignment != 0 else 1
             random_trajs = np.random.randint(len(cluster_datasets[different_cluster])//25, size=3)
             rollout = cluster_datasets[different_cluster].observations[random_trajs[2]*25:(random_trajs[2]+1)*25]
-            print(rollout)
             renderer = utils.make_renderer(args)
             rollout_savepath = f"{logging_folder}/mp4s/question_{ctr}/traj_different_cluster.mp4"
             renderer.render_rollout(rollout_savepath, rollout, fps=10)
             videoClip = VideoFileClip(f"{logging_folder}/mp4s/question_{ctr}/traj_different_cluster.mp4")
             videoClip.write_gif(f"{logging_folder}/gifs/question_{ctr}/traj_different_cluster.gif")
 
+            # Random unrelated trajectory
             rollout = dataset_d3.observations[unrelated_idxs[ctr]-25:unrelated_idxs[ctr]]
-            print(rollout)
             renderer = utils.make_renderer(args)
             rollout_savepath = f"{logging_folder}/mp4s/question_{ctr}/traj_unrelated.mp4"
             renderer.render_rollout(rollout_savepath, rollout, fps=10)
