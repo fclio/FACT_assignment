@@ -4,6 +4,7 @@ This study reproduces the results and adds additional experiments to the paper b
 
 Shripad Vilasrao Deshmukh, Arpan Dasgupta, Balaji Krishnamurthy, Nan Jiang, Chirag Agarwal, Georgios
 Theocharous, and Jayakumar Subramanian. Explaining RL Decisions with Trajectories, 2023.
+https://arxiv.org/abs/2305.04073
 
 ## To run the code: 
 ### Grid-world (code provided by original authors)
