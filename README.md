@@ -46,7 +46,7 @@ cd seaquest
 conda env create -f environment.yml
 conda activate seaquest
 ~~~~
-Then run the main file to get the results.
+Then run the main file to get the results, including the .
 ~~~shell
 python3 trajectory_attribution.py
 ~~~
@@ -59,7 +59,7 @@ conda env create -f environment_HC.yml
 conda activate halfcheetah
 conda install -c conda-forge libstdcxx-ng
 ~~~~
-Then run the main file to get the results.
+Then run the main file to plot the PCA visualization and get the quantitative results for one experiment run.
 ~~~shell
 python3 experiment.py --dataset halfcheetah-medium-v2     --gpt_loadpath gpt/pretrained
 ~~~
