@@ -46,7 +46,7 @@ cd seaquest
 conda env create -f environment.yml
 conda activate seaquest
 ~~~~
-Then run the main file to get the results, including the .
+Then run the main file to get the results. The results will be printed in the terminal. The images will be saved to the images directory.
 ~~~shell
 python3 trajectory_attribution.py
 ~~~
