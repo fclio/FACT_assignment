@@ -1,7 +1,7 @@
 # Reproducibility study of "Explaining RL decisions with trajectories"
 Authors: Clio Feng, Bart den Boef, Bart Aaldering, and Colin Bot.
 
-Code for the paper [https://openreview.net/forum?id=JQoWmeNaC2&noteId=HN2YxBATRB](`Reproducibility Study of "Explaining RL Decisions with Trajectories"')
+Code for the paper [`Reproducibility Study of "Explaining RL Decisions with Trajectories"'](https://openreview.net/forum?id=JQoWmeNaC2&noteId=HN2YxBATRB)
 This study reproduces the results and adds additional experiments to the paper by Deshmukh et al. (2023).
 
 Shripad Vilasrao Deshmukh, Arpan Dasgupta, Balaji Krishnamurthy, Nan Jiang, Chirag Agarwal, Georgios
